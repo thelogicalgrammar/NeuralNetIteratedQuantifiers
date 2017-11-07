@@ -21,7 +21,8 @@ def create_languages_dataframe(agents, possible_inputs):
     """
     languages_dataframe = pd.DataFrame(index=possible_inputs)
     for n, agent in enumerate(agents):
-        languages_dataframe[n] = np.array([agent.produce(possible_in) for possible_in in possible_inputs])
+        languages_dataframe[n] = agent.produce(possible_inputs)
+        #np.array([agent.produce(possible_in) for possible_in in possible_inputs])
     return languages_dataframe
 
 
@@ -35,6 +36,15 @@ def generate_list_inputs(l):
 def generate_random_input(list_inputs):
     return rnd.choice(list_inputs)
 
+
+def equal_languages(actual, wanted, tolerance=0.05):
+    # every agent disagrees w/ actual lang < 5% of time
+    # TODO: documentation
+    assert actual.shape == wanted.shape
+    difference = actual.subtract(wanted)
+    means = difference.mean()
+    means = means.apply(lambda x: abs(x) < tolerance)
+    return means.all()
 
 def check_quantity(agent):
     # goes through all the meanings and checks whether (or how much) the learned quantifier satisfies quantity

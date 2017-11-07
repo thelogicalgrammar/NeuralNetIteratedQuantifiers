@@ -1,26 +1,42 @@
 import random as rnd
 import pandas as pd
+import numpy as np
 import utilities as util
+import keras
 
 
 class Agent:
-    def __init__(self):
-        pass
+    def __init__(self, input_length):
 
-    def learn(self, data):
+        # TODO: parameterize model structure
+        model = keras.models.Sequential()
+        model.add(keras.layers.Dense(8, input_dim=input_length, activation='relu'))
+        model.add(keras.layers.Dense(1, activation='sigmoid'))
+        model.compile(loss='binary_crossentropy',
+                optimizer='adam',
+                metrics=['accuracy'])
+        self._model = model
+
+    def learn(self, data, batch_size=12, epochs=1, validation_split=0.25):
         """
         CONTROLLED BY NEURAL NET
         Data is a Series with inputs as indices and 0/1 as values
         (basically it's the whole training data from the parent)
         """
-        pass       # just to check whether the rest of the simulation runs
+        x = np.array(data.index.tolist())
+        y = data.values
+        self._model.fit(x, y, batch_size=batch_size, epochs=epochs,
+                validation_split=validation_split)
 
     def produce(self, agent_input):
         """
         CONTROLLED BY NEURAL NET
         Returns 0 or 1 for whether the agent's quantifier is compatible with agent_input (which is an array of bits)
         """
-        return rnd.choice([0,1])     # just to check whether the rest of the simulation runs
+        x = np.array(agent_input.tolist())
+        predictions = self._model.predict(x)
+        return predictions
+        # return rnd.choice([0,1])     # just to check whether the rest of the simulation runs
 
 
 class Population:
@@ -28,7 +44,8 @@ class Population:
         # all binary strings of the wanted lengths
         self.possible_inputs = possible_inputs
         # list of agent objects (I am not sure what you need to initialize your neural net)
-        self.agents = [Agent() for _ in range(size)]
+        input_length = len(possible_inputs[0])
+        self.agents = [Agent(input_length) for _ in range(size)]
 
     def learn_from_population(self, parent_pop, bottleneck_size):
         """
@@ -57,9 +74,11 @@ class Population:
         while True:
             for n in range(check_every):
                 # go through a whole training session (all agents with all inputs)
-                [agent.learn(wanted_languages[agent_n]) for agent_n, agent in enumerate(self.agents)]
+                [agent.learn(wanted_languages[agent_n], epochs=10,
+                    validation_split=0.0) for agent_n, agent in enumerate(self.agents)]
             actual_languages = util.create_languages_dataframe(self.agents, self.possible_inputs)
-            if actual_languages.equals(wanted_languages):
+            # TODO: fix this equality check
+            if util.equal_languages(actual_languages, wanted_languages):
                 self.languages = util.create_languages_dataframe(self.agents, self.possible_inputs)
                 return
 

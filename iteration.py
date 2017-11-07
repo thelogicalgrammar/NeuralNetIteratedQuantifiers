@@ -23,6 +23,10 @@ parent_generation.languages = util.create_languages_dataframe(
 # we make really sure that the agents in the first generation have the intended random languages
 parent_generation.really_really_learn(initial_languages)
 
+# TODO: redo the above?
+# because agents are networks, initialized randomly, no need for
+# really_really_learn?
+
 data = []
 for n in range(n_generations):
 
