@@ -35,8 +35,8 @@ class Agent:
         """
         x = np.array(agent_input.tolist())
         predictions = self._model.predict(x)
+        # TODO: argmax here, or only later if needed?
         return predictions
-        # return rnd.choice([0,1])     # just to check whether the rest of the simulation runs
 
 
 class Population:
