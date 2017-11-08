@@ -2,7 +2,8 @@ import pandas as pd
 import numpy as np
 import random as rnd
 import itertools as iter
-
+import matplotlib.pyplot as plt
+import scipy.stats
 
 def random_quantifiers(number_agents, list_inputs):
     """
@@ -22,7 +23,6 @@ def create_languages_dataframe(agents, possible_inputs):
     languages_dataframe = pd.DataFrame(index=possible_inputs)
     for n, agent in enumerate(agents):
         languages_dataframe[n] = agent.produce(possible_inputs)
-        #np.array([agent.produce(possible_in) for possible_in in possible_inputs])
     return languages_dataframe
 
 
@@ -50,3 +50,13 @@ def equal_languages(actual, wanted, tolerance=0.05):
 def check_quantity(agent):
     # goes through all the meanings and checks whether (or how much) the learned quantifier satisfies quantity
     pass
+
+
+def language_distributions(population):
+    langs = population.languages.as_matrix()
+    # ignore first, always 0.5 for some reason
+    for poss_input in range(1, len(langs)):
+        kde = scipy.stats.gaussian_kde(langs[poss_input, :])
+        x = np.linspace(0, 1, 200)
+        plt.plot(x, kde(x))
+    plt.show()
