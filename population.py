@@ -31,12 +31,30 @@ class Agent:
     def produce(self, agent_input):
         """
         CONTROLLED BY NEURAL NET
-        Returns 0 or 1 for whether the agent's quantifier is compatible with agent_input (which is an array of bits)
+        Returns probability assigned to 1 for list of inputs (array of lists of
+        bits)
         """
         x = np.array(agent_input.tolist())
-        predictions = self._model.predict(x)
-        # TODO: argmax here, or only later if needed?
-        return predictions
+        return self._model.predict(x)
+
+    def map(self, agent_input):
+        """
+        Returns 0 or 1, by 'argmaxing' the probabilities, i.e. returning
+        whichever one had higher probability.
+        """
+        return np.around(self.produce(agent_input))
+
+    def sample(self, agent_input):
+        """
+        Returns 0 or 1 for some inputs, by sampling from the network's output
+        probability.
+        """
+        probabilities = self.produce(agent_input)
+        uniforms = np.random.rand(len(probabilities), 1)
+        # choices: (N, 1) shape of booleans
+        choices = uniforms < probabilities
+        # if want 1/0, return choices.astype(int)
+        return choices.astype(int)
 
 
 class Population:

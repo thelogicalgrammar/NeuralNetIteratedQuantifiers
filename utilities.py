@@ -7,7 +7,7 @@ import itertools as iter
 def random_quantifiers(number_agents, list_inputs):
     """
     returns a pd dataframe with meaning rows and a column for each agent
-    columns are series of binaries describing which meanings are compatible with agent's quantifier
+    columns are series of binaries describing which inputs are compatible with agent's quantifier
     """
     random_functions = np.random.randint(2, size=(list_inputs.size, number_agents))
     languages = pd.DataFrame(random_functions, index=list_inputs)
@@ -45,6 +45,7 @@ def equal_languages(actual, wanted, tolerance=0.05):
     means = difference.mean()
     means = means.apply(lambda x: abs(x) < tolerance)
     return means.all()
+
 
 def check_quantity(agent):
     # goes through all the meanings and checks whether (or how much) the learned quantifier satisfies quantity
