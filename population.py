@@ -31,8 +31,7 @@ class Agent:
     def produce(self, agent_input):
         """
         CONTROLLED BY NEURAL NET
-        Returns probability assigned to 1 for list of inputs (array of lists of
-        bits)
+        Returns probability assigned to 1 for list of inputs (array of lists of bits)
         """
         x = np.array(agent_input.tolist())
         return self._model.predict(x)
@@ -61,7 +60,7 @@ class Population:
     def __init__(self, size, possible_inputs):
         # all binary strings of the wanted lengths
         self.possible_inputs = possible_inputs
-        # list of agent objects (I am not sure what you need to initialize your neural net)
+        # list of agent objects
         input_length = len(possible_inputs[0])
         self.agents = [Agent(input_length) for _ in range(size)]
 
@@ -72,33 +71,12 @@ class Population:
         A Series "data" is created by sampling with replacement from the parent's language
         The child is trained
         """
-        parent_languages = parent_pop.languages
         for child in self.agents:
-            parent_lang = parent_languages[rnd.choice(parent_languages.columns)]
-            data = parent_lang.sample(bottleneck_size, replace=True)
-            child.learn(data)
+            parent = rnd.choice(parent_pop.agents)
+            data_for_parent = self.possible_inputs.sample(bottleneck_size, replace=True)  # sample func from pd.Series
+            data_for_child = pd.Series(parent.map(data_for_parent).flatten(), data_for_parent)
+            child.learn(data_for_child)
         self.languages = util.create_languages_dataframe(self.agents, self.possible_inputs)
-
-    def really_really_learn(self, wanted_languages, check_every=10):
-        """
-        This function makes absolutely sure that the agents really learn the intended languages
-        It teaches each agent the language that they are supposed to learn and checks whether they have learned it
-        every check_every teachings
-        It stops training when there is no difference between the language they are supposed to learn and the
-        language they actually learned
-        """
-        # Maybe I should implement some tolerance for error?
-        # this bit can be made more efficient by focusing on training only the agents that haven't learned yet
-        while True:
-            for n in range(check_every):
-                # go through a whole training session (all agents with all inputs)
-                [agent.learn(wanted_languages[agent_n], epochs=10,
-                    validation_split=0.0) for agent_n, agent in enumerate(self.agents)]
-            actual_languages = util.create_languages_dataframe(self.agents, self.possible_inputs)
-            # TODO: fix this equality check
-            if util.equal_languages(actual_languages, wanted_languages):
-                self.languages = util.create_languages_dataframe(self.agents, self.possible_inputs)
-                return
 
     def information(self):
         return self.languages
