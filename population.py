@@ -1,7 +1,5 @@
 import random as rnd
-import pandas as pd
 import numpy as np
-import utilities as util
 import keras
 
 
@@ -17,14 +15,14 @@ class Agent:
                 metrics=['accuracy'])
         self._model = model
 
-    def learn(self, data, batch_size=12, epochs=1, validation_split=0.25):
+    def learn(self, inputs, parent_bools, batch_size=12, epochs=1, validation_split=0.25):
         """
         CONTROLLED BY NEURAL NET
-        Data is a Series with inputs as indices and 0/1 as values
-        (basically it's the whole training data from the parent)
+        inputs is an array with shape (# inputs, size model)
+        parent_bools is the parent's judgment for each of the inputs
         """
-        x = np.array(data.index.tolist())
-        y = data.values
+        x = inputs
+        y = parent_bools
         self._model.fit(x, y, batch_size=batch_size, epochs=epochs,
                 validation_split=validation_split)
 
@@ -33,7 +31,7 @@ class Agent:
         CONTROLLED BY NEURAL NET
         Returns probability assigned to 1 for list of inputs (array of lists of bits)
         """
-        x = np.array(agent_input.tolist())
+        x = agent_input
         return self._model.predict(x)
 
     def map(self, agent_input):
@@ -57,26 +55,20 @@ class Agent:
 
 
 class Population:
-    def __init__(self, size, possible_inputs):
-        # all binary strings of the wanted lengths
-        self.possible_inputs = possible_inputs
+    def __init__(self, size, input_length):
+        self.input_length = input_length
         # list of agent objects
-        input_length = len(possible_inputs[0])
         self.agents = [Agent(input_length) for _ in range(size)]
 
     def learn_from_population(self, parent_pop, bottleneck_size):
         """
-        parent_languages is the DataFrame with all the languages for all inputs from previous population
-        Each child in self.agents is selected in turns. A random parent from old pop is selected.
-        A Series "data" is created by sampling with replacement from the parent's language
-        The child is trained
+        Each child in self.agents is selected in turn. A random parent from old pop is selected with replacement.
+        inputs is created as a random array of booleans (there can be repeated rows, I don't know if this is fine)
+        The child is trained on the production of the parent for the vectors in inputs
         """
         for child in self.agents:
             parent = rnd.choice(parent_pop.agents)
-            data_for_parent = self.possible_inputs.sample(bottleneck_size, replace=True)  # sample func from pd.Series
-            data_for_child = pd.Series(parent.map(data_for_parent).flatten(), data_for_parent)
-            child.learn(data_for_child)
-        self.languages = util.create_languages_dataframe(self.agents, self.possible_inputs)
-
-    def information(self):
-        return self.languages
+            inputs = np.random.randint(0, 2, size=(bottleneck_size, self.input_length))
+            # make the parent produce the data for the sampled inputs
+            parent_bools = parent.map(inputs)
+            child.learn(inputs, parent_bools)

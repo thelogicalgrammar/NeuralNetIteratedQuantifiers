@@ -23,14 +23,18 @@ def violin_plots_confidence(n_generations, n_agents, bottleneck, length_inputs):
     data = iteration.iterate(n_generations, n_agents, bottleneck, length_inputs)
 
     plt.violinplot(data.as_matrix())
+
+    plt.title("Bottleneck: {}".format(bottleneck))
+    plt.xlabel("Generations")
+    plt.ylabel("Confidence for all inputs")
     plt.show()
 
 if __name__ == "__main__":
 
     input_values = {
-        "n_generations": 5,
+        "n_generations": 50,
         "n_agents": 1,
-        "bottleneck": 100,
+        "bottleneck": 4000,
         "length_inputs": 5
     }
 
