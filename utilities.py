@@ -1,13 +1,12 @@
 import numpy as np
 import random as rnd
-import itertools as iter
+import itertools as it
 
 
 def generate_list_inputs(l):
     # l is the length of the bit strings
-    # returns a list of all lists of bits of l length
-    # indices generator is a list of lists of indices
-    indices_generator = iter.chain.from_iterable(iter.combinations(range(l), r) for r in range(len(range(l))+1))
+    # returns an array with a row for each model
+    indices_generator = it.chain.from_iterable(it.combinations(range(l), r) for r in range(len(range(l))+1))
     return np.array([[1 if n in indices_list else 0 for n in range(l)] for indices_list in indices_generator])
 
 
@@ -79,8 +78,9 @@ def check_quantity(list_inputs, map_lang):
 
 if __name__ == "__main__":
     import population as pop
-    max_model_size = 10
+    max_model_size = 3
     agent = pop.Agent(max_model_size)
     inputs = generate_list_inputs(max_model_size)
+    print(inputs)
     languages = create_languages_array([agent], inputs, map=True)
-    print(check_quantity(inputs, languages))
+    # print(check_quantity(inputs, languages))

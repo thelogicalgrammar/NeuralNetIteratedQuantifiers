@@ -1,9 +1,10 @@
+import argparse
 import utilities as util
 import population as pop
 import numpy as np
 
 
-def iterate(n_generations, n_agents, bottleneck, length_inputs):
+def iterate(n_generations, n_agents, bottleneck, length_inputs, save_path=False):
     # generate all the binary strings of the given length
     # possible_inputs is a 2d array, where each row is a model
     possible_inputs = util.generate_list_inputs(length_inputs)
@@ -25,16 +26,24 @@ def iterate(n_generations, n_agents, bottleneck, length_inputs):
 
     # stores the data from the last trained generation
     data[n_generations] = util.create_languages_array(parent_generation.agents, possible_inputs)
+    if save_path:
+        np.save(input_values.save_path, data)
+
     return data
 
 
 if __name__ == "__main__":
-    input_values = {
-        "n_generations": 5,
-        "n_agents": 1,
-        "bottleneck": 100,
-        "length_inputs": 3
-    }
 
-    data = iterate(**input_values)
+    parser = argparse.ArgumentParser()
+
+    # parser.add_argument("--", type=, default=)
+    parser.add_argument("--bottleneck", type=int, default=1000)
+    parser.add_argument("--save_path", type=str, default="")
+    parser.add_argument("--n_generations", type=int, default=100)
+    parser.add_argument("--n_agents", type=int, default=10)
+    parser.add_argument("--length_inputs", type=int, default=8)
+
+    input_values = parser.parse_args()
+
+    data = iterate(**vars(input_values))
     print(data)
