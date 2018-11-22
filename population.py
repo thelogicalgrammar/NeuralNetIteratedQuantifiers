@@ -1,38 +1,57 @@
 import random as rnd
 import numpy as np
-import keras
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+
+class MLP(nn.Module):
+    def __init__(self, input_length):
+        super(MLP, self).__init__()
+        # TODO: parameterize this structure
+        self.fc1 = nn.Linear(input_length, 16)
+        self.fc2 = nn.Linear(16, 16)
+        self.output = nn.Linear(16, 1)
+
+    def forward(self, x):
+        x = torch.Tensor(x)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        # output is [batch_size, 1]
+        return torch.sigmoid(self.output(x))
 
 
 class Agent:
     def __init__(self, input_length):
+        self.model = MLP(input_length)
 
-        # TODO: parameterize model structure
-        model = keras.models.Sequential()
-        model.add(keras.layers.Dense(8, input_dim=input_length, activation='relu'))
-        model.add(keras.layers.Dense(1, activation='sigmoid'))
-        model.compile(loss='binary_crossentropy',
-                optimizer='adam',
-                metrics=['accuracy'])
-        self._model = model
-
-    def learn(self, inputs, parent_bools, batch_size=12, epochs=1, validation_split=0.25):
-        """
-        CONTROLLED BY NEURAL NET
-        inputs is an array with shape (# inputs, size model)
-        parent_bools is the parent's judgment for each of the inputs
-        """
-        x = inputs
-        y = parent_bools
-        self._model.fit(x, y, batch_size=batch_size, epochs=epochs,
-                validation_split=validation_split)
+    def learn(self, inputs, parent_bools, batch_size=32, epochs=4):
+        # reshape parent_bools
+        parent_bools = parent_bools[:, None]
+        # TODO: play with options here?
+        optim = torch.optim.Adam(self.model.parameters())
+        for epoch in range(epochs):
+            # re-order the data each epoch
+            permutation = np.random.permutation(len(inputs))
+            # -- [bottleneck_size, input-length]
+            x = inputs[permutation]
+            y = parent_bools[permutation]
+            num_batches = int(len(x) / batch_size)
+            for batch in range(num_batches):
+                optim.zero_grad()
+                # get net predictions
+                batch_x = x[batch*batch_size:(batch+1)*batch_size]
+                predictions = self.model(batch_x)
+                batch_y = y[batch*batch_size:(batch+1)*batch_size]
+                # loss
+                loss = F.binary_cross_entropy(predictions,
+                                              torch.Tensor(batch_y))
+                # back-propagate the loss
+                loss.backward()
+                optim.step()
 
     def produce(self, agent_input):
-        """
-        CONTROLLED BY NEURAL NET
-        Returns probability assigned to 1 for list of inputs (array of lists of bits)
-        """
-        x = agent_input
-        return self._model.predict(x)
+        return self.model(agent_input).detach().numpy()
 
     def map(self, agent_input):
         """

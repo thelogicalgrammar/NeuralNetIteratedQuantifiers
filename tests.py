@@ -54,3 +54,7 @@ def agent_agent_test():
         distances.append(check_agents_similarity(agent1, agent2, possible_inputs))
     plt.scatter(range(len(distances)), distances)
     plt.show()
+
+
+if __name__ == '__main__':
+    agent_quantifier_test()
