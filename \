@@ -10,8 +10,7 @@ def check_agents_similarity(agent1, agent2, possible_inputs):
     """
     returns the proportion of the inputs about which the agents disagree
     """
-    judgments = create_languages_array([agent1, agent2], possible_inputs,
-                                       map=True)
+    judgments = create_languages_array([agent1, agent2], possible_inputs)
     # proportion of models where the judgments of the two agents are different
     prop_different = np.sum(np.abs(judgments[:, 0] - judgments[:, 1])) / possible_inputs.shape[0]
     return prop_different
@@ -24,23 +23,16 @@ def check_agent_quantifier_similarity(agent, quantifier, possible_inputs):
 
 
 def agent_quantifier_test():
-    input_length = 10
+    input_length = 7
     possible_inputs = generate_list_inputs(input_length)
     quantifier = np.random.randint(0, 2, size=(len(possible_inputs), 1))
     agent = pop.Agent(input_length)
     distances = []
-    for i in range(1000):
-        random_indices = np.random.randint(0, possible_inputs.shape[0],
-                                           int(0.7*len(possible_inputs)))
+    for i in range(5000):
+        random_indices = np.random.randint(0, possible_inputs.shape[0], 100)
         inputs = possible_inputs[random_indices]
-        production = quantifier[random_indices]
-        if i == 0:
-            seaborn.distplot(agent.produce(possible_inputs), label='initial')
+        production = quantifier[random_indices][:, None]
         agent.learn(inputs, production)
-        if i == 0:
-            seaborn.distplot(agent.produce(possible_inputs), label='after one')
-            plt.legend()
-            plt.show()
         distances.append(check_agent_quantifier_similarity(agent, quantifier, possible_inputs))
     plt.scatter(range(len(distances)), distances)
     plt.show()
@@ -51,25 +43,21 @@ def agent_agent_test():
     Shows how the similarity between two agents evolves as the second agent
     sees more and more of the first agent's output
     """
-    input_length = 10
+    input_length = 7
     possible_inputs = generate_list_inputs(input_length)
     agent1, agent2 = pop.Agent(input_length), pop.Agent(input_length)
     distances = []
     for i in range(1000):
-        random_indices = np.random.randint(0, possible_inputs.shape[0],
-                                           int(0.7*len(possible_inputs)))
+        random_indices = np.random.randint(0, possible_inputs.shape[0], 32)
         # inputs are randomly picked rows of possible_inputs
         inputs = possible_inputs[random_indices]
         production = agent1.map(inputs)
         agent2.learn(inputs, production)
-        print('new')
-        print(agent1.model(inputs))
-        print('agent2')
-        print(agent2.model(inputs))
+        print(agent2.map(inputs))
         distances.append(check_agents_similarity(agent1, agent2, possible_inputs))
     plt.scatter(range(len(distances)), distances)
     plt.show()
 
 
 if __name__ == '__main__':
-    agent_quantifier_test()
+    agent_agent_test()

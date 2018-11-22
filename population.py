@@ -25,7 +25,7 @@ class Agent:
     def __init__(self, input_length):
         self.model = MLP(input_length)
 
-    def learn(self, inputs, parent_bools, batch_size=32, epochs=4):
+    def learn(self, inputs, parent_bools, batch_size=32, epochs=1):
         # TODO: play with options here?
         optim = torch.optim.Adam(self.model.parameters())
         for epoch in range(epochs):

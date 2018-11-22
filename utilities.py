@@ -26,11 +26,11 @@ def create_languages_array(agents, possible_inputs, map=False):
     languages = np.empty(shape=(possible_inputs.shape[0], len(agents)))
     if map:
         for n, agent in enumerate(agents):
-            languages[:, n] = agent.map(possible_inputs).T
+            languages[:, n] = agent.map(possible_inputs).flatten()
     else:
         for n, agent in enumerate(agents):
             # assumes that agent.produce is vectorized
-            languages[:, n] = agent.produce(possible_inputs).T
+            languages[:, n] = agent.produce(possible_inputs).flatten()
     return languages
 
 
