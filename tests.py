@@ -61,11 +61,10 @@ def agent_agent_test():
         # inputs are randomly picked rows of possible_inputs
         inputs = possible_inputs[random_indices]
         production = agent1.map(inputs)
+        if i == 0:
+            seaborn.distplot(agent1.produce(possible_inputs), label='initial')
+            plt.show()
         agent2.learn(inputs, production)
-        print('new')
-        print(agent1.model(inputs))
-        print('agent2')
-        print(agent2.model(inputs))
         distances.append(check_agents_similarity(agent1, agent2, possible_inputs))
     plt.scatter(range(len(distances)), distances)
     plt.show()
@@ -73,3 +72,4 @@ def agent_agent_test():
 
 if __name__ == '__main__':
     agent_quantifier_test()
+    agent_agent_test()

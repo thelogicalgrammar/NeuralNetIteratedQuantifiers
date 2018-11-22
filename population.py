@@ -11,6 +11,7 @@ class MLP(nn.Module):
         # TODO: parameterize this structure
         self.fc1 = nn.Linear(input_length, 16)
         self.fc2 = nn.Linear(16, 16)
+        self.bn = nn.BatchNorm1d(16)
         self.output = nn.Linear(16, 1)
 
     def forward(self, x):
@@ -18,6 +19,7 @@ class MLP(nn.Module):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         # output is [batch_size, 1]
+        x = self.bn(x)
         return torch.sigmoid(self.output(x))
 
 
