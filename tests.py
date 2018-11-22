@@ -31,7 +31,7 @@ def agent_quantifier_test():
     for i in range(5000):
         random_indices = np.random.randint(0, possible_inputs.shape[0], 100)
         inputs = possible_inputs[random_indices]
-        production = quantifier[random_indices]
+        production = quantifier[random_indices][:, None]
         agent.learn(inputs, production)
         distances.append(check_agent_quantifier_similarity(agent, quantifier, possible_inputs))
     plt.scatter(range(len(distances)), distances)

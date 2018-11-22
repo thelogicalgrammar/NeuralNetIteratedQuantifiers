@@ -26,8 +26,6 @@ class Agent:
         self.model = MLP(input_length)
 
     def learn(self, inputs, parent_bools, batch_size=32, epochs=4):
-        # reshape parent_bools
-        parent_bools = parent_bools[:, None]
         # TODO: play with options here?
         optim = torch.optim.Adam(self.model.parameters())
         for epoch in range(epochs):
