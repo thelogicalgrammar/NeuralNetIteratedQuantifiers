@@ -37,11 +37,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # parser.add_argument("--", type=, default=)
-    parser.add_argument("--bottleneck", type=int, default=1000)
+    parser.add_argument("--bottleneck", type=int, default=10)
     parser.add_argument("--save_path", type=str, default="")
     parser.add_argument("--n_generations", type=int, default=100)
-    parser.add_argument("--n_agents", type=int, default=10)
-    parser.add_argument("--length_inputs", type=int, default=8)
+    parser.add_argument("--n_agents", type=int, default=1)
+    parser.add_argument("--length_inputs", type=int, default=3)
 
     input_values = parser.parse_args()
 
