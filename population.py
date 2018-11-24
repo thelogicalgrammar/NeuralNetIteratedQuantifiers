@@ -74,7 +74,7 @@ class NetworkAgent(Agent):
     def __init__(self, input_length):
         self.model = MLP(input_length)
 
-    def learn(self, inputs, parent_bools, batch_size=32, epochs=1, shuffle_by_epoch=True):
+    def learn(self, inputs, parent_bools, batch_size=32, epochs=3, shuffle_by_epoch=True):
         # TODO: play with options here?
         optim = torch.optim.Adam(self.model.parameters())
         for epoch in range(epochs):
@@ -105,7 +105,7 @@ class Population:
     def __init__(self, size, input_length):
         self.input_length = input_length
         # list of agent objects
-        self.agents = [Agent(input_length) for _ in range(size)]
+        self.agents = [NetworkAgent(input_length) for _ in range(size)]
 
     def learn_from_population(self, parent_pop, bottleneck_size):
         """
