@@ -34,8 +34,7 @@ def agent_quantifier_test(input_length=None, quant=None, train_split=0.75):
         input_length = 10
     possible_inputs = generate_list_inputs(input_length)
     quantifier = quant or np.random.randint(0, 2, size=(len(possible_inputs), 1))
-    possible_inputs, quantifier = shuffle_learning_input(
-        possible_inputs, quantifier)
+    possible_inputs, quantifier = shuffle_learning_input(possible_inputs, quantifier)
     train_inputs, test_inputs = train_test_split(possible_inputs, train_split)
     train_quant, test_quant = train_test_split(quantifier, train_split)
 
@@ -167,8 +166,6 @@ def check_probability_matching_other_agent(real_teacher, uncertainty=1.):
     else:
          agent1 = pop.SimulatedTeacher(input_length, uncertainty)
 
-    np.set_printoptions(suppress=True)
-    print(create_languages_array([agent1, agent2], possible_inputs, map=False))
     distances = []
     for i in range(3000):
         random_indices = np.random.randint(0, possible_inputs.shape[0],
@@ -179,8 +176,7 @@ def check_probability_matching_other_agent(real_teacher, uncertainty=1.):
         production = agent1.sample(inputs)
         agent2.learn(inputs, production)
         distances.append(check_agents_similarity(agent1, agent2, possible_inputs))
-        print(create_languages_array([agent1, agent2], possible_inputs, map=False))
-    np.set_printoptions(suppress=False)
+
     plt.scatter(range(len(distances)), distances)
     plt.show()
 
@@ -229,9 +225,6 @@ def test_order_importance():
         unshuffled_std = np.std(unshuffled_test, axis=1)
         shuffled_std = np.std(shuffled_test, axis=1)
 
-        print(unshuffled_std)
-        print(shuffled_std)
-
         # calculate the differences in standard deviations for the shuffled and unshuffled group
         # if shuffling has an effect, the differences should be positive
         differences_std = shuffled_std - unshuffled_std
@@ -257,6 +250,42 @@ def measure_upward_monotonicity(possible_inputs, quantifier):
 def measure_monotonicity(possible_inputs,quantifier):
     return np.max([measure_upward_monotonicity(possible_inputs, quantifier),
         measure_upward_monotonicity(possible_inputs, np.logical_not(quantifier))])
+
+
+def check_quantity(list_inputs, map_lang):
+    # TODO: consider vectorizing across first axis (i.e. generation) of the 3-d results array
+    # TODO: this function is written pretty badly
+
+    """
+    Calculates quantity as 1 - H(quantifier is true at the model | model size)
+    """
+    # prob_num is the array with the unconditional probability of each # of 1s in a random model
+    count_ones = np.count_nonzero(list_inputs, axis=1)
+    num_arrays_of_length = np.unique(count_ones, return_counts=True)[1]
+    prob_num = num_arrays_of_length / list_inputs.shape[0]
+    # 2d array with shape (quantifier true values, model size) that is true if the quantifier is
+    # true at that model, at the column corresponding to that model size
+    temp = np.zeros(shape=(map_lang.shape[0], list_inputs.shape[1]+1))
+    # there must be a better way of doing this but I can't think of it atm
+    for i in np.arange(0, len(map_lang)):
+        temp[i, count_ones[i]] = map_lang[i]
+
+    num_true_by_size = np.sum(temp, axis=0)
+    prob_true_by_size = num_true_by_size / num_arrays_of_length
+    prob_false_by_size = 1 - prob_true_by_size
+    log1 = np.log2(prob_true_by_size)
+    log1[log1 == -np.inf] = 0
+    entropy1 = prob_true_by_size * log1
+    log2 = np.log2(prob_false_by_size)
+    log2[log2 == -np.inf] = 0
+    entropy2 = prob_false_by_size * log2
+    cond_entropy = -np.sum(prob_num * (entropy1 + entropy2))
+
+    # since the maximum entropy of a bernoulli variable is 1 bit, cond_entropy <= 1
+    # make it into a distance rather than a similarity.
+    # If quantity is 1, it means that the quantifier is completely monotonic
+    quantity = 1 - cond_entropy
+    return quantity
 
 
 if __name__ == '__main__':
