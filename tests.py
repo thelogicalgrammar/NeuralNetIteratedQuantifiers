@@ -110,35 +110,43 @@ def agent_agent_test():
     plt.show()
 
 
-def random_mon_quant(input_length, possible_inputs):
-    # create random monotone quantifier
-    bound_position = np.random.randint(input_length)
-    direction = np.random.randint(2)
-    sizes = np.sum(possible_inputs, axis=1)
-    return np.where(
-        ((direction == 1) & (sizes >= bound_position)) | ((direction == 0) & (sizes <= bound_position)), 1, 0).reshape(-1, 1)
+def random_quant(input_length, possible_inputs, type="random"):
 
+    if type=="random":
+        return np.random.randint(2, size=(possible_inputs.shape[0], 1))
 
-def random_conv_quant(input_length, possible_inputs):
-    # create random convex (possible monotone) quantifier
-    bounds_position = np.sort(np.random.choice(input_length, size=2, replace=False))
-    direction = np.random.randint(2)
-    counts = np.sum(possible_inputs, axis=1)
-    quant = (counts <= bounds_position[0]) | (counts >= bounds_position[1]) == direction
-    return quant.reshape(-1, 1).astype(np.int)
+    if type=="mon":
+        # create random monotone quantifier
+        bound_position = np.random.randint(input_length)
+        direction = np.random.randint(2)
+        sizes = np.sum(possible_inputs, axis=1)
+        return np.where(
+            ((direction == 1) & (sizes >= bound_position)) | ((direction == 0) & (sizes <= bound_position)), 1, 0).reshape(-1, 1)
+
+    elif type=="conv":
+        # create random convex (possible monotone) quantifier
+        bounds_position = np.sort(np.random.choice(input_length, size=2, replace=False))
+        direction = np.random.randint(2)
+        counts = np.sum(possible_inputs, axis=1)
+        quant = (counts <= bounds_position[0]) | (counts >= bounds_position[1]) == direction
+        return quant.reshape(-1, 1).astype(np.int)
+
+    else:
+        # TODO: implement more quantifier types
+        raise ValueError("Value of quantifier type not recognized. Either mon, conv, or random")
 
 
 def test_monotonicity_preference():
     """
     Check whether the agents are faster to learn monotone than non-monotone quantifiers
     """
-    input_length = 10
+    input_length = 7
     possible_inputs = generate_list_inputs(input_length)
     mon_dist = []
     non_mon_dist = []
     for i in range(100):
-        mon_quant = random_mon_quant(input_length, possible_inputs)
-        non_mon_quant = random_conv_quant(input_length, possible_inputs)
+        mon_quant = random_quant(input_length, possible_inputs, type="mon")
+        non_mon_quant = random_quant(input_length, possible_inputs)
         mon_dist.append(agent_quantifier_test(input_length, mon_quant))
         non_mon_dist.append(agent_quantifier_test(input_length, non_mon_quant))
         print(i)
@@ -146,9 +154,6 @@ def test_monotonicity_preference():
     plt.plot(np.mean(non_mon_dist, axis=0), label="Non mon")
     plt.legend()
     plt.show()
-
-
-
 
 
 def check_probability_matching_few_models():
@@ -203,8 +208,59 @@ def check_probability_matching_other_agent(real_teacher, uncertainty=1.):
     plt.show()
 
 
+def shuffle_learning_input(inputs, parent_bools, restrict=1.):
+    learning_subset_indices = np.random.randint(inputs.shape[0], size=int(inputs.shape[0] * restrict))
+    models = inputs[learning_subset_indices, :]
+    truth_values = parent_bools[learning_subset_indices, :]
+    return models, truth_values
+
+
+def test_order_importance():
+    """
+    Is there more variability across the guessed quantifiers if the order is shuffled every time?
+    In other words, does the order matter for learning?
+    Check whether agents learn a quantifier from the same observations more consistently (even if wrongly)
+    if those observations are always in the same order rather than shifted order
+    """
+    input_length = 7
+    possible_inputs = generate_list_inputs(input_length)
+    n_tests = 1000
+
+    # check for different quantifiers
+    for i in range(1):
+        quantifier = random_quant(input_length, possible_inputs)
+        models, truth_values = shuffle_learning_input(possible_inputs, quantifier, restrict=0.7)
+
+        # unshuffled condition
+        learners = [pop.Agent(input_length) for _ in range(n_tests)]
+        map(lambda agent: agent.learn(models, truth_values, shuffle_by_epoch=False), learners)
+        # unshuffled_test is the array of the languages learned from the quantifier without shuffling the input
+        unshuffled_test = create_languages_array(learners, possible_inputs)
+
+        # shuffled condition
+        learners = [pop.Agent(input_length) for _ in range(n_tests)]
+        map(lambda agent: agent.learn(shuffle_learning_input(models, truth_values)), learners)
+        # shuffled_test is the array of the languages learned from the quantifier when shuffling the input
+        shuffled_test = create_languages_array(learners, possible_inputs)
+
+        # calculate the standard deviation in what the agents learned for every model
+        unshuffled_std = np.std(unshuffled_test, axis=1)
+        shuffled_std = np.std(shuffled_test, axis=1)
+
+        print(unshuffled_std)
+        print(shuffled_std)
+
+        # calculate the differences in standard deviations for the shuffled and unshuffled group
+        # if shuffling has an effect, the differences should be positive
+        differences_std = shuffled_std - unshuffled_std
+
+        plt.hist(differences_std, bins=100)
+        plt.show()
+
+
 if __name__ == '__main__':
     # check_probability_matching_other_agent(real_teacher=False, uncertainty=1.)
     # check_probability_matching_other_agent(real_teacher=False, uncertainty=0.5)
 
-    test_monotonicity_preference()
+    # test_monotonicity_preference()
+    test_order_importance()

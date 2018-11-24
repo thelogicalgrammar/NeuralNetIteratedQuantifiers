@@ -27,12 +27,13 @@ class Agent:
     def __init__(self, input_length):
         self.model = MLP(input_length)
 
-    def learn(self, inputs, parent_bools, batch_size=32, epochs=1):
+    def learn(self, inputs, parent_bools, batch_size=32, epochs=1, shuffle_by_epoch=True):
         # TODO: play with options here?
         optim = torch.optim.Adam(self.model.parameters())
         for epoch in range(epochs):
             # re-order the data each epoch
-            permutation = np.random.permutation(len(inputs))
+            permutation = np.random.permutation(len(inputs)) if shuffle_by_epoch else np.arange(len(inputs))
+            print("Hi")
             # -- [bottleneck_size, input-length]
             x = inputs[permutation]
             y = parent_bools[permutation]
