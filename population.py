@@ -24,6 +24,53 @@ class MLP(nn.Module):
 
 
 class Agent:
+
+    def produce(self, agent_input):
+        pass
+
+    def map(self, agent_input):
+        """
+        Returns 0 or 1, by 'argmaxing' the probabilities, i.e. returning
+        whichever one had higher probability.
+        """
+        return np.around(self.produce(agent_input))
+
+    def sample(self, agent_input):
+        """
+        Returns 0 or 1 for some inputs, by sampling from the network's output
+        probability.
+        """
+
+        probabilities = self.produce(agent_input)
+        uniforms = np.random.rand(len(probabilities), 1)
+        # choices: (N, 1) shape of booleans
+        choices = uniforms < probabilities
+        # if want 1/0, return choices.astype(int)
+        return choices.astype(int)
+
+
+class SimulatedTeacher(Agent):
+    def __init__(self, input_length, uncertainty):
+        """
+        input length is the max model length
+        0 < uncertainty
+        For values < than 1, the agent prefers either true or false
+        For values > than 1, the agent prefers to be neutral (i.e. around 0.5)
+        """
+        self.possible_inputs = generate_list_inputs(input_length)
+        self.confidence = np.random.beta(uncertainty, uncertainty, size=(self.possible_inputs.shape[0], 1))
+
+    def produce(self, agent_input):
+        # returns the confidence for each model (row) of agent_input
+        indices = np.apply_along_axis(
+            lambda row: np.argwhere(np.all(row == self.possible_inputs, axis=1)),
+            axis=1,
+            arr=agent_input
+        ).flatten()
+        return self.confidence[indices]
+
+
+class NetworkAgent(Agent):
     def __init__(self, input_length):
         self.model = MLP(input_length)
 
@@ -53,25 +100,6 @@ class Agent:
 
     def produce(self, agent_input):
         return self.model(agent_input).detach().numpy()
-
-    def map(self, agent_input):
-        """
-        Returns 0 or 1, by 'argmaxing' the probabilities, i.e. returning
-        whichever one had higher probability.
-        """
-        return np.around(self.produce(agent_input))
-
-    def sample(self, agent_input):
-        """
-        Returns 0 or 1 for some inputs, by sampling from the network's output
-        probability.
-        """
-        probabilities = self.produce(agent_input)
-        uniforms = np.random.rand(len(probabilities), 1)
-        # choices: (N, 1) shape of booleans
-        choices = uniforms < probabilities
-        # if want 1/0, return choices.astype(int)
-        return choices.astype(int)
 
 
 class Population:

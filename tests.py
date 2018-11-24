@@ -7,42 +7,6 @@ import seaborn
 import random as rnd
 
 
-class SimulatedTeacher:
-    def __init__(self, input_length, uncertainty):
-        """
-        input length is the max model length
-        0 < uncertainty
-        For values < than 1, the agent prefers either true or false
-        For values > than 1, the agent prefers to be neutral (i.e. around 0.5)
-        """
-        self.possible_inputs = generate_list_inputs(input_length)
-        self.confidence = np.random.beta(uncertainty, uncertainty, size=(self.possible_inputs.shape[0], 1))
-
-    def produce(self, agent_input):
-        # returns the confidence for each model (row) of agent_input
-        indices = np.apply_along_axis(
-            lambda row: np.argwhere(np.all(row == self.possible_inputs, axis=1)),
-            axis=1,
-            arr=agent_input
-        ).flatten()
-        return self.confidence[indices]
-
-    def map(self, agent_input):
-        """
-        Returns 0 or 1, by 'argmaxing' the probabilities, i.e. returning
-        whichever one had higher probability.
-        """
-        return np.around(self.produce(agent_input))
-
-    def sample(self, agent_input):
-        probabilities = self.produce(agent_input)
-        uniforms = np.random.rand(len(probabilities), 1)
-        # choices: (N, 1) shape of booleans
-        choices = uniforms < probabilities
-        # if want 1/0, return choices.astype(int)
-        return choices.astype(int)
-
-
 def check_agents_similarity(agent1, agent2, possible_inputs, map=False):
     """
     returns the proportion of the inputs about which the agents disagree if map==True
@@ -68,7 +32,7 @@ def agent_quantifier_test(input_length=None, quant=False):
         quantifier = np.random.randint(0, 2, size=(len(possible_inputs), 1))
     else:
         quantifier = quant
-    agent = pop.Agent(input_length)
+    agent = pop.NetworkAgent(input_length)
     distances = []
     for i in range(1000):
         random_indices = np.random.randint(0, possible_inputs.shape[0],
@@ -93,7 +57,7 @@ def agent_agent_test():
     """
     input_length = 10
     possible_inputs = generate_list_inputs(input_length)
-    agent1, agent2 = pop.Agent(input_length), pop.Agent(input_length)
+    agent1, agent2 = pop.NetworkAgent(input_length), pop.NetworkAgent(input_length)
     distances = []
     for i in range(1000):
         random_indices = np.random.randint(0, possible_inputs.shape[0],
@@ -166,7 +130,7 @@ def check_probability_matching_few_models():
     for model, p_model in zip(models, prob_models):
         model = np.tile(model, (repetitions_per_model, 1))
         judgs = np.random.binomial(n=1, p=p_model, size=(repetitions_per_model, 1))
-        agent = pop.Agent(3)
+        agent = pop.NetworkAgent(3)
         agent.learn(model, judgs)
     print(np.column_stack((prob_models, agent.produce(models))))
 
@@ -184,11 +148,11 @@ def check_probability_matching_other_agent(real_teacher, uncertainty=1.):
     """
     input_length = 7
     possible_inputs = generate_list_inputs(input_length)
-    agent2 = pop.Agent(input_length)
+    agent2 = pop.NetworkAgent(input_length)
     if real_teacher:
-        agent1 = pop.Agent(input_length)
+        agent1 = pop.NetworkAgent(input_length)
     else:
-         agent1 = SimulatedTeacher(input_length, uncertainty)
+         agent1 = pop.SimulatedTeacher(input_length, uncertainty)
 
     np.set_printoptions(suppress=True)
     print(create_languages_array([agent1, agent2], possible_inputs, map=False))
@@ -232,13 +196,13 @@ def test_order_importance():
         models, truth_values = shuffle_learning_input(possible_inputs, quantifier, restrict=0.7)
 
         # unshuffled condition
-        learners = [pop.Agent(input_length) for _ in range(n_tests)]
+        learners = [pop.NetworkAgent(input_length) for _ in range(n_tests)]
         map(lambda agent: agent.learn(models, truth_values, shuffle_by_epoch=False), learners)
         # unshuffled_test is the array of the languages learned from the quantifier without shuffling the input
         unshuffled_test = create_languages_array(learners, possible_inputs)
 
         # shuffled condition
-        learners = [pop.Agent(input_length) for _ in range(n_tests)]
+        learners = [pop.NetworkAgent(input_length) for _ in range(n_tests)]
         map(lambda agent: agent.learn(shuffle_learning_input(models, truth_values)), learners)
         # shuffled_test is the array of the languages learned from the quantifier when shuffling the input
         shuffled_test = create_languages_array(learners, possible_inputs)
