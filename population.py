@@ -80,7 +80,6 @@ class NetworkAgent(Agent):
         for epoch in range(epochs):
             # re-order the data each epoch
             permutation = np.random.permutation(len(inputs)) if shuffle_by_epoch else np.arange(len(inputs))
-            print("Hi")
             # -- [bottleneck_size, input-length]
             x = inputs[permutation]
             y = parent_bools[permutation]

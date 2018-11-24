@@ -7,38 +7,45 @@ import seaborn
 import random as rnd
 
 
-def check_agents_similarity(agent1, agent2, possible_inputs, map=False):
+def L1_dist(column1, column2):
+    return np.sum(np.absolute(column1 - column2)) / len(column1)
+
+
+def check_agents_similarity(agent1, agent2, possible_inputs, mapping=False):
     """
     returns the proportion of the inputs about which the agents disagree if map==True
     or the average difference between their confidence level about each input if map==False
     """
-    judgments = create_languages_array([agent1, agent2], possible_inputs, map)
+    judgments = create_languages_array([agent1, agent2], possible_inputs,
+                                       mapping)
     # proportion of models where the judgments of the two agents are different
-    prop_different = np.sum(np.abs(judgments[:, 0] - judgments[:, 1])) / possible_inputs.shape[0]
+    prop_different = L1_dist(judgments[:, 0], judgments[:, 1])
     return prop_different
 
 
 def check_agent_quantifier_similarity(agent, quantifier, possible_inputs):
     judgments = agent.map(possible_inputs)
-    prop_different = np.sum(np.abs(quantifier - judgments)) / possible_inputs.shape[0]
+    prop_different = L1_dist(quantifier, judgments)
     return prop_different
 
 
-def agent_quantifier_test(input_length=None, quant=False):
+def agent_quantifier_test(input_length=None, quant=None, train_split=0.75):
     if not input_length:
         input_length = 10
     possible_inputs = generate_list_inputs(input_length)
-    if type(quant) == np.ndarray:
-        quantifier = np.random.randint(0, 2, size=(len(possible_inputs), 1))
-    else:
-        quantifier = quant
+    quantifier = quant or np.random.randint(0, 2, size=(len(possible_inputs), 1))
+    possible_inputs, quantifier = shuffle_learning_input(
+        possible_inputs, quantifier)
+    train_inputs, test_inputs = train_test_split(possible_inputs, train_split)
+    train_quant, test_quant = train_test_split(quantifier, train_split)
+
     agent = pop.NetworkAgent(input_length)
-    distances = []
+    train_distances, test_distances = [], []
     for i in range(1000):
-        random_indices = np.random.randint(0, possible_inputs.shape[0],
-                                           int(0.7*len(possible_inputs)))
-        inputs = possible_inputs[random_indices]
-        production = quantifier[random_indices]
+        random_indices = np.random.randint(0, len(train_inputs),
+                                           int(0.7*len(train_inputs)))
+        inputs = train_inputs[random_indices]
+        production = train_quant[random_indices]
         # if i == 0:
         #     seaborn.distplot(agent.produce(possible_inputs), label='initial')
         agent.learn(inputs, production)
@@ -46,8 +53,14 @@ def agent_quantifier_test(input_length=None, quant=False):
         #     seaborn.distplot(agent.produce(possible_inputs), label='after one')
         #     plt.legend()
         #     plt.show()
-        distances.append(check_agent_quantifier_similarity(agent, quantifier, possible_inputs))
-    return distances
+        train_distances.append(check_agent_quantifier_similarity(
+            agent, train_quant, train_inputs))
+        test_distances.append(check_agent_quantifier_similarity(
+            agent, test_quant, test_inputs))
+    plt.scatter(range(len(train_distances)), train_distances)
+    plt.scatter(range(len(test_distances)), test_distances)
+    plt.show()
+    return train_distances, test_distances
 
 
 def agent_agent_test():
@@ -74,12 +87,12 @@ def agent_agent_test():
     plt.show()
 
 
-def random_quant(input_length, possible_inputs, type="random"):
+def random_quant(input_length, possible_inputs, qtype="random"):
 
-    if type=="random":
+    if qtype=="random":
         return np.random.randint(2, size=(possible_inputs.shape[0], 1))
 
-    if type=="mon":
+    if qtype=="mon":
         # create random monotone quantifier
         bound_position = np.random.randint(input_length)
         direction = np.random.randint(2)
@@ -87,7 +100,7 @@ def random_quant(input_length, possible_inputs, type="random"):
         return np.where(
             ((direction == 1) & (sizes >= bound_position)) | ((direction == 0) & (sizes <= bound_position)), 1, 0).reshape(-1, 1)
 
-    elif type=="conv":
+    elif qtype=="conv":
         # create random convex (possible monotone) quantifier
         bounds_position = np.sort(np.random.choice(input_length, size=2, replace=False))
         direction = np.random.randint(2)
@@ -179,6 +192,11 @@ def shuffle_learning_input(inputs, parent_bools, restrict=1.):
     return models, truth_values
 
 
+def train_test_split(arr, split):
+    max_idx = int(len(arr)*split)
+    return arr[:max_idx], arr[max_idx:]
+
+
 def test_order_importance():
     """
     Is there more variability across the guessed quantifiers if the order is shuffled every time?
@@ -225,6 +243,6 @@ def test_order_importance():
 if __name__ == '__main__':
     # check_probability_matching_other_agent(real_teacher=False, uncertainty=1.)
     # check_probability_matching_other_agent(real_teacher=False, uncertainty=0.5)
-
-    # test_monotonicity_preference()
-    test_order_importance()
+    agent_quantifier_test()
+    #test_monotonicity_preference()
+    #test_order_importance()
