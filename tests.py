@@ -256,16 +256,15 @@ def measure_monotonicity(possible_inputs, quantifier, type="extensions"):
 
 
 def quantifiers_in_order_of_monotonicity(l):
-    # TODO: Not working, for some reason mon_value is always floored for every degree of mon
     models = generate_list_inputs(l)
-    quantifiers = generate_list_inputs(len(models))
+    quantifiers = generate_list_inputs(len(models)).astype(int)
     mon_values = np.empty(shape=(len(quantifiers), 1))
     for i in range(len(quantifiers)):
         mon_values[i] = measure_monotonicity(models, quantifiers[i])
-    order_indices = np.argsort(mon_values)
-    ordered_quantifiers = quantifiers[order_indices]
+    order_indices = np.argsort(mon_values, axis=0)
     with np.printoptions(threshold=np.inf):
-        print(np.column_stack((ordered_quantifiers, mon_values[order_indices])))
+        pprint([(quantifier, mon_value) for quantifier, mon_value in zip(quantifiers[order_indices].tolist(), mon_values[order_indices].tolist())])
+
 
 
 def check_quantity(list_inputs, map_lang):
