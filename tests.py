@@ -72,7 +72,7 @@ def agent_agent_test():
     agent1, agent2 = pop.NetworkAgent(input_length), pop.NetworkAgent(input_length)
     distances = []
     for i in range(1000):
-        random_indices = np.random.randint(0, possible_inputs.shape[0],
+        random_indices = np.random.randint(0, len(possible_inputs),
                                            int(0.7*len(possible_inputs)))
         # inputs are randomly picked rows of possible_inputs
         inputs = possible_inputs[random_indices]
@@ -89,7 +89,7 @@ def agent_agent_test():
 def random_quant(input_length, possible_inputs, qtype="random"):
 
     if qtype=="random":
-        return np.random.randint(2, size=(possible_inputs.shape[0], 1))
+        return np.random.randint(2, size=(len(possible_inputs), 1))
 
     if qtype=="mon":
         # create random monotone quantifier
@@ -168,7 +168,7 @@ def check_probability_matching_other_agent(real_teacher, uncertainty=1.):
 
     distances = []
     for i in range(3000):
-        random_indices = np.random.randint(0, possible_inputs.shape[0],
+        random_indices = np.random.randint(0, len(possible_inputs),
                                            int(0.9*len(possible_inputs))
                                            )
         # inputs are randomly picked rows of possible_inputs
@@ -182,7 +182,7 @@ def check_probability_matching_other_agent(real_teacher, uncertainty=1.):
 
 
 def shuffle_learning_input(inputs, parent_bools, restrict=1.):
-    learning_subset_indices = np.random.randint(inputs.shape[0], size=int(inputs.shape[0] * restrict))
+    learning_subset_indices = np.random.randint(len(inputs), size=int(len(inputs) * restrict))
     models = inputs[learning_subset_indices, :]
     truth_values = parent_bools[learning_subset_indices, :]
     return models, truth_values
@@ -240,23 +240,28 @@ def measure_upward_monotonicity(possible_inputs, quantifier):
     #only consider those models for which the quantifier is true (non zero returns indices)
     for i in np.nonzero(quantifier.flatten() == 1)[0]:
         model = possible_inputs[i, :]
-        tiled_model = np.tile(model, (possible_inputs.shape[0], 1))
+        tiled_model = np.tile(model, (len(possible_inputs), 1))
         extends = np.all(tiled_model*possible_inputs == tiled_model, axis=1).flatten()
         #proportion of true extensions of that model for the quantifier
         props.append(np.sum(quantifier[extends])/np.sum(extends))
     return np.mean(props)
 
 
-def measure_monotonicity(possible_inputs, quantifier):
-    return np.max([measure_upward_monotonicity(possible_inputs, quantifier),
-                measure_upward_monotonicity(1-possible_inputs, 1-quantifier)])
+def measure_monotonicity(possible_inputs, quantifier, type="extensions"):
+    if type == "extensions":
+        return np.max([measure_upward_monotonicity(possible_inputs, quantifier),
+                    measure_upward_monotonicity(1-possible_inputs, 1-quantifier)])
+    elif type == "step":
+        pass
 
 
 def quantifiers_in_order_of_monotonicity(l):
     # TODO: Not working, for some reason mon_value is always floored for every degree of mon
     models = generate_list_inputs(l)
-    quantifiers = generate_list_inputs(models.shape[0])
-    mon_values = np.apply_along_axis(lambda quant: measure_monotonicity(models, quant), axis=1, arr=quantifiers)
+    quantifiers = generate_list_inputs(len(models))
+    mon_values = np.empty(shape=(len(quantifiers), 1))
+    for i in range(len(quantifiers)):
+        mon_values[i] = measure_monotonicity(models, quantifiers[i])
     order_indices = np.argsort(mon_values)
     ordered_quantifiers = quantifiers[order_indices]
     with np.printoptions(threshold=np.inf):
@@ -273,10 +278,10 @@ def check_quantity(list_inputs, map_lang):
     # prob_num is the array with the unconditional probability of each # of 1s in a random model
     count_ones = np.count_nonzero(list_inputs, axis=1)
     num_arrays_of_length = np.unique(count_ones, return_counts=True)[1]
-    prob_num = num_arrays_of_length / list_inputs.shape[0]
+    prob_num = num_arrays_of_length / len(list_inputs)
     # 2d array with shape (quantifier true values, model size) that is true if the quantifier is
     # true at that model, at the column corresponding to that model size
-    temp = np.zeros(shape=(map_lang.shape[0], list_inputs.shape[1]+1))
+    temp = np.zeros(shape=(len(map_lang), list_inputs.shape[1]+1))
     # there must be a better way of doing this but I can't think of it atm
     for i in np.arange(0, len(map_lang)):
         temp[i, count_ones[i]] = map_lang[i]
