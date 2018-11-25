@@ -271,22 +271,19 @@ def quantifiers_in_order_of_monotonicity(l):
 def check_quantity(list_inputs, map_lang):
     # TODO: consider vectorizing across first axis (i.e. generation) of the 3-d results array
     # TODO: this function is written pretty badly
-
     """
     Calculates quantity as 1 - H(quantifier is true at the model | model size)
     """
     # prob_num is the array with the unconditional probability of each # of 1s in a random model
     count_ones = np.count_nonzero(list_inputs, axis=1)
     num_arrays_of_length = np.unique(count_ones, return_counts=True)[1]
-    prob_num = num_arrays_of_length / len(list_inputs)
-    # 2d array with shape (quantifier true values, model size) that is true if the quantifier is
-    # true at that model, at the column corresponding to that model size
-    temp = np.zeros(shape=(len(map_lang), list_inputs.shape[1]+1))
-    # there must be a better way of doing this but I can't think of it atm
-    for i in np.arange(0, len(map_lang)):
-        temp[i, count_ones[i]] = map_lang[i]
+    prob_num = num_arrays_of_length / sum(num_arrays_of_length)
 
-    num_true_by_size = np.sum(temp, axis=0)
+    model_sizes = np.sum(list_inputs, axis=1)
+    true_model_sizes = model_sizes[np.nonzero(map_lang)]
+    num_true_by_size = np.bincount(true_model_sizes,
+                                   minlength=max(model_sizes)+1)
+
     prob_true_by_size = num_true_by_size / num_arrays_of_length
     prob_false_by_size = 1 - prob_true_by_size
     log1 = np.log2(prob_true_by_size)
@@ -305,8 +302,7 @@ def check_quantity(list_inputs, map_lang):
 
 
 if __name__ == '__main__':
-    quantifiers_in_order_of_monotonicity(3)
-    """
+    # quantifiers_in_order_of_monotonicity(3)
     models_size_3 = generate_list_inputs(3)
     def exactly_2(seq):
         return np.sum(seq) == 2
@@ -318,4 +314,3 @@ if __name__ == '__main__':
         first_one, axis=1, arr=models_size_3).astype(np.int)
     print(check_quantity(models_size_3, ex2_lang))
     print(check_quantity(models_size_3, f1_lang))
-    """
