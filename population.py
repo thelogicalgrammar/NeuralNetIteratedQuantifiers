@@ -50,16 +50,11 @@ class Agent:
         return choices.astype(int)
 
 
-class SimulatedTeacher(Agent):
-    def __init__(self, input_length, uncertainty):
-        """
-        input length is the max model length
-        0 < uncertainty
-        For values < than 1, the agent prefers either true or false
-        For values > than 1, the agent prefers to be neutral (i.e. around 0.5)
-        """
+class FixedAgent(Agent):
+
+    def __init__(self, input_length):
         self.possible_inputs = generate_list_inputs(input_length)
-        self.confidence = np.random.beta(uncertainty, uncertainty, size=(len(self.possible_inputs), 1))
+        self.confidence = None
 
     def produce(self, agent_input):
         # returns the confidence for each model (row) of agent_input
@@ -69,6 +64,27 @@ class SimulatedTeacher(Agent):
             arr=agent_input
         ).flatten()
         return self.confidence[indices]
+
+
+class ConfidenceTeacher(FixedAgent):
+    def __init__(self, input_length, uncertainty):
+        """
+        input length is the max model length
+        0 < uncertainty
+        For values < than 1, the agent prefers either true or false
+        For values > than 1, the agent prefers to be neutral (i.e. around 0.5)
+        """
+        super(ConfidenceTeacher, self).__init__(input_length)
+        self.confidence = np.random.beta(uncertainty, uncertainty,
+                                         size=(len(self.possible_inputs), 1))
+
+
+class UniformRandomAgent(FixedAgent):
+
+    def __init__(self, input_length):
+        super(UniformRandomAgent, self).__init__(input_length)
+        self.confidence = np.random.uniform(
+            size=(len(self.possible_inputs), 1))
 
 
 class NetworkAgent(Agent):
