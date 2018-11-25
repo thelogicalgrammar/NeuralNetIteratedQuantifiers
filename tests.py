@@ -238,7 +238,7 @@ def measure_upward_monotonicity(possible_inputs, quantifier):
         return 1
     props = []
     #only consider those models for which the quantifier is true (non zero returns indices)
-    for i in np.nonzero(quantifier.flatten()==1)[0]:
+    for i in np.nonzero(quantifier.flatten() == 1)[0]:
         model = possible_inputs[i, :]
         tiled_model = np.tile(model, (possible_inputs.shape[0], 1))
         extends = np.all(tiled_model*possible_inputs == tiled_model, axis=1).flatten()
@@ -247,9 +247,20 @@ def measure_upward_monotonicity(possible_inputs, quantifier):
     return np.mean(props)
 
 
-def measure_monotonicity(possible_inputs,quantifier):
+def measure_monotonicity(possible_inputs, quantifier):
     return np.max([measure_upward_monotonicity(possible_inputs, quantifier),
-        measure_upward_monotonicity(possible_inputs, np.logical_not(quantifier))])
+                measure_upward_monotonicity(1-possible_inputs, 1-quantifier)])
+
+
+def quantifiers_in_order_of_monotonicity(l):
+    # TODO: Not working, for some reason mon_value is always floored for every degree of mon
+    models = generate_list_inputs(l)
+    quantifiers = generate_list_inputs(models.shape[0])
+    mon_values = np.apply_along_axis(lambda quant: measure_monotonicity(models, quant), axis=1, arr=quantifiers)
+    order_indices = np.argsort(mon_values)
+    ordered_quantifiers = quantifiers[order_indices]
+    with np.printoptions(threshold=np.inf):
+        print(np.column_stack((ordered_quantifiers, mon_values[order_indices])))
 
 
 def check_quantity(list_inputs, map_lang):
@@ -289,8 +300,4 @@ def check_quantity(list_inputs, map_lang):
 
 
 if __name__ == '__main__':
-    # check_probability_matching_other_agent(real_teacher=False, uncertainty=1.)
-    # check_probability_matching_other_agent(real_teacher=False, uncertainty=0.5)
-    agent_quantifier_test()
-    #test_monotonicity_preference()
-    #test_order_importance()
+    quantifiers_in_order_of_monotonicity(3)
