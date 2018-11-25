@@ -1,5 +1,6 @@
 import random as rnd
 import numpy as np
+from utilities import generate_list_inputs
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -58,7 +59,7 @@ class SimulatedTeacher(Agent):
         For values > than 1, the agent prefers to be neutral (i.e. around 0.5)
         """
         self.possible_inputs = generate_list_inputs(input_length)
-        self.confidence = np.random.beta(uncertainty, uncertainty, size=(self.possible_inputs.shape[0], 1))
+        self.confidence = np.random.beta(uncertainty, uncertainty, size=(len(self.possible_inputs), 1))
 
     def produce(self, agent_input):
         # returns the confidence for each model (row) of agent_input

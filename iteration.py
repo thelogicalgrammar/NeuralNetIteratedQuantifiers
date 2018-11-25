@@ -11,7 +11,7 @@ def iterate(n_generations, n_agents, bottleneck, length_inputs, save_path=False)
     # create first generation
     parent_generation = pop.Population(n_agents, length_inputs)
     # data is a 3-d numpy array with shape (# gen, # possible inputs, # agents)
-    data = np.empty(shape=(n_generations+1, possible_inputs.shape[0], n_agents))
+    data = np.empty(shape=(n_generations+1, len(possible_inputs), n_agents))
 
     for n in range(n_generations):
         # the new generation is created
