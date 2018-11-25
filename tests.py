@@ -305,3 +305,16 @@ def check_quantity(list_inputs, map_lang):
 
 if __name__ == '__main__':
     quantifiers_in_order_of_monotonicity(3)
+    """
+    models_size_3 = generate_list_inputs(3)
+    def exactly_2(seq):
+        return np.sum(seq) == 2
+    def first_one(seq):
+        return seq[0] == 1
+    ex2_lang = np.apply_along_axis(
+        exactly_2, axis=1, arr=models_size_3).astype(np.int)
+    f1_lang = np.apply_along_axis(
+        first_one, axis=1, arr=models_size_3).astype(np.int)
+    print(check_quantity(models_size_3, ex2_lang))
+    print(check_quantity(models_size_3, f1_lang))
+    """
