@@ -266,9 +266,17 @@ def quantifiers_in_order_of_monotonicity(l):
         pprint([(quantifier, mon_value) for quantifier, mon_value in zip(quantifiers[order_indices].tolist(), mon_values[order_indices].tolist())])
 
 
-def chance_property_distribution(l, property, sample_size=1000):
+def chance_property_distribution(l, property, agents, sample_size=1000):
+    """
+    :param l: max model length
+    :param property: which property (as a function)
+    :param agent: list of agents
+    :param sample_size: how many agents to sample
+    :return: Distribution
+    """
     models = generate_list_inputs(l)
-    random_quants = np.random.randint(2, size=(sample_size, len(models)))
+    # random_quants = np.random.randint(2, size=(sample_size, len(models)))
+    random_quants = [agent.map(models) for agent in agents]
     mons = [property(models, random_quant) for random_quant in random_quants]
     seaborn.distplot(mons)
     plt.show()
@@ -308,7 +316,7 @@ def check_quantity(list_inputs, map_lang):
 
 
 if __name__ == '__main__':
-    chance_property_distribution(10, measure_monotonicity)
+    chance_property_distribution(10, measure_monotonicity, [pop.NetworkAgent(10) for _ in range(1000)])
     """
     # quantifiers_in_order_of_monotonicity(3)
 
