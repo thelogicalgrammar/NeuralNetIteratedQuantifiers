@@ -266,6 +266,13 @@ def quantifiers_in_order_of_monotonicity(l):
         pprint([(quantifier, mon_value) for quantifier, mon_value in zip(quantifiers[order_indices].tolist(), mon_values[order_indices].tolist())])
 
 
+def chance_property_distribution(l, property, sample_size=1000):
+    models = generate_list_inputs(l)
+    random_quants = np.random.randint(2, size=(sample_size, len(models)))
+    mons = [property(models, random_quant) for random_quant in random_quants]
+    seaborn.distplot(mons)
+    plt.show()
+
 
 def check_quantity(list_inputs, map_lang):
     # TODO: consider vectorizing across first axis (i.e. generation) of the 3-d results array
@@ -301,7 +308,10 @@ def check_quantity(list_inputs, map_lang):
 
 
 if __name__ == '__main__':
+    chance_property_distribution(10, measure_monotonicity)
+    """
     # quantifiers_in_order_of_monotonicity(3)
+
     models_size_3 = generate_list_inputs(3)
     def exactly_2(seq):
         return np.sum(seq) == 2
@@ -313,3 +323,4 @@ if __name__ == '__main__':
         first_one, axis=1, arr=models_size_3).astype(np.int)
     print(check_quantity(models_size_3, ex2_lang))
     print(check_quantity(models_size_3, f1_lang))
+    """
