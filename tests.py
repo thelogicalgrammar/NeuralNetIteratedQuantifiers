@@ -282,6 +282,16 @@ def chance_property_distribution(l, property, agents, sample_size=1000):
     plt.show()
 
 
+def detect_region_of_motion(first_distribution, second_distribution):
+    """
+    Hows the quantifiers that
+    :param first_distribution:
+    :param second_distribution:
+    :return:
+    """
+    pass
+
+
 def check_quantity(list_inputs, map_lang):
     # TODO: consider vectorizing across first axis (i.e. generation) of the 3-d results array
     # TODO: this function is written pretty badly
