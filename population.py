@@ -91,10 +91,10 @@ class NetworkAgent(Agent):
     def __init__(self, input_length):
         self.model = MLP(input_length)
 
-    def learn(self, inputs, parent_bools, batch_size=32, epochs=3, shuffle_by_epoch=True):
+    def learn(self, inputs, parent_bools, batch_size=32, num_epochs=3, shuffle_by_epoch=True):
         # TODO: play with options here?
         optim = torch.optim.Adam(self.model.parameters())
-        for epoch in range(epochs):
+        for epoch in range(num_epochs):
             # re-order the data each epoch
             permutation = np.random.permutation(len(inputs)) if shuffle_by_epoch else np.arange(len(inputs))
             # -- [bottleneck_size, input-length]
@@ -124,7 +124,7 @@ class Population:
         # list of agent objects
         self.agents = [NetworkAgent(input_length) for _ in range(size)]
 
-    def learn_from_population(self, parent_pop, bottleneck_size):
+    def learn_from_population(self, parent_pop, bottleneck_size, num_epochs=1):
         """
         Each child in self.agents is selected in turn. A random parent from old pop is selected with replacement.
         inputs is created as a random array of booleans (there can be repeated rows, I don't know if this is fine)
@@ -135,4 +135,4 @@ class Population:
             inputs = np.random.randint(0, 2, size=(bottleneck_size, self.input_length))
             # make the parent produce the data for the sampled inputs
             parent_bools = parent.map(inputs)
-            child.learn(inputs, parent_bools)
+            child.learn(inputs, parent_bools, num_epochs)

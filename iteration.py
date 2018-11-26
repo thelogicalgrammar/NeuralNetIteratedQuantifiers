@@ -4,7 +4,8 @@ import population as pop
 import numpy as np
 
 
-def iterate(n_generations, n_agents, bottleneck, length_inputs, save_path=False, num_trial=None):
+def iterate(n_generations, n_agents, bottleneck, length_inputs,
+            save_path=False, num_trial=None, num_epochs=1):
     # generate all the binary strings of the given length
     # possible_inputs is a 2d array, where each row is a model
     possible_inputs = util.generate_list_inputs(length_inputs)
@@ -17,7 +18,9 @@ def iterate(n_generations, n_agents, bottleneck, length_inputs, save_path=False,
         # the new generation is created
         child_generation = pop.Population(n_agents, length_inputs)
         # the new generation learns from the old one
-        child_generation.learn_from_population(parent_generation, bottleneck)
+        child_generation.learn_from_population(parent_generation,
+                                               bottleneck,
+                                               num_epochs)
         # stores some data to be analyzed later!
         data[n] = util.create_languages_array(parent_generation.agents, possible_inputs)
         # the new generation becomes the old generation, ready to train the next generation
@@ -43,9 +46,10 @@ if __name__ == "__main__":
     parser.add_argument("--n_generations", type=int, default=100)
     parser.add_argument("--n_agents", type=int, default=1)
     parser.add_argument("--length_inputs", type=int, default=3)
+    parser.add_argument("--num_epochs", type=int, default=3)
 
     input_values = parser.parse_args()
-    input_values.save_path += "_".join("{}-{}".format(key, value) for key, value in vars(input_values).items()
+    input_values.save_path += "+".join("{}-{}".format(key, value) for key, value in vars(input_values).items()
                                        if key != "save_path")
 
     iterate(**vars(input_values))
