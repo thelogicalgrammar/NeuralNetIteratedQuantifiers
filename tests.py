@@ -1,3 +1,4 @@
+from functools import lru_cache
 import numpy as np
 from utilities import generate_list_inputs, create_languages_array
 import population as pop
@@ -245,6 +246,15 @@ def measure_upward_monotonicity(possible_inputs, quantifier):
         #proportion of true extensions of that model for the quantifier
         props.append(np.sum(quantifier[extends])/np.sum(extends))
     return np.mean(props)
+
+
+@lru_cache(maxsize=None)
+def monotonicity_memoized(inputs_string, quantifier_string):
+    """inputs_string = models.tostring() for 2d int array models;
+    quantifier_string = quantifier.tostring() for 1d int array """
+    quantifier = np.frombuffer(quantifier_string, dtype=int)
+    inputs = np.frombuffer(inputs_string, dtype=int).reshape((len(quantifier), -1))
+    return measure_monotonicity(inputs, quantifier)
 
 
 def measure_monotonicity(possible_inputs, quantifier, type="extensions"):
