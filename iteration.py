@@ -37,6 +37,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # parser.add_argument("--", type=, default=)
+    parser.add_argument("--num_trial", type=int, default=0)
     parser.add_argument("--bottleneck", type=int, default=10)
     parser.add_argument("--save_path", type=str, default="")
     parser.add_argument("--n_generations", type=int, default=100)
@@ -44,6 +45,7 @@ if __name__ == "__main__":
     parser.add_argument("--length_inputs", type=int, default=3)
 
     input_values = parser.parse_args()
+    input_values.save_path += "_".join("{}-{}".format(key, value) for key, value in vars(input_values)
+                                       if key != "save_path")
 
-    data = iterate(**vars(input_values))
-    print(data)
+    iterate(**vars(input_values))
