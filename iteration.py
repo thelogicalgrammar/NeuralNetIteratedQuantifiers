@@ -45,7 +45,7 @@ if __name__ == "__main__":
     parser.add_argument("--length_inputs", type=int, default=3)
 
     input_values = parser.parse_args()
-    input_values.save_path += "_".join("{}-{}".format(key, value) for key, value in vars(input_values)
+    input_values.save_path += "_".join("{}-{}".format(key, value) for key, value in vars(input_values).items()
                                        if key != "save_path")
 
     iterate(**vars(input_values))
