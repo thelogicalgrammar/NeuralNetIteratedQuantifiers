@@ -4,7 +4,7 @@ import population as pop
 import numpy as np
 
 
-def iterate(n_generations, n_agents, bottleneck, length_inputs, save_path=False):
+def iterate(n_generations, n_agents, bottleneck, length_inputs, save_path=False, num_trial=None):
     # generate all the binary strings of the given length
     # possible_inputs is a 2d array, where each row is a model
     possible_inputs = util.generate_list_inputs(length_inputs)
