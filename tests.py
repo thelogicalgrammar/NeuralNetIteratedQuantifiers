@@ -257,6 +257,15 @@ def monotonicity_memoized(inputs_string, quantifier_string):
     return measure_monotonicity(inputs, quantifier)
 
 
+@lru_cache(maxsize=None)
+def quantity_memoized(inputs_string, quantifier_string):
+    """inputs_string = models.tostring() for 2d int array models;
+    quantifier_string = quantifier.tostring() for 1d int array """
+    quantifier = np.frombuffer(quantifier_string, dtype=int)
+    inputs = np.frombuffer(inputs_string, dtype=int).reshape((len(quantifier), -1))
+    return check_quantity(inputs, quantifier)
+
+
 def measure_monotonicity(possible_inputs, quantifier, type="extensions"):
     if type == "extensions":
         return np.max([measure_upward_monotonicity(possible_inputs, quantifier),
