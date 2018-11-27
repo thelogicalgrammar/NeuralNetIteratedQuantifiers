@@ -379,8 +379,8 @@ def inter_generational_movement_speed(generations, parents):
     changes = [0, ]
     for gen_index in range(1, len(generations)):
         children = generations[gen_index]
-        parents = generations[gen_index-1, :, parents[gen_index]]
-        changes.append(L1_dist(parents, children))
+        parent_qs = generations[gen_index-1, :, parents[gen_index]].T
+        changes.append(L1_dist(parent_qs, children))
     return np.array(changes)
 
 
