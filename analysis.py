@@ -18,7 +18,7 @@ def summarize_trial(trial_info, data):
         a pd.DataFrame
     """
     frame = pd.DataFrame()
-    models = utilities.generate_list_inputs(int(trial_info['length_inputs']))
+    models = utilities.generate_list_models(int(trial_info['length_inputs']))
     for generation in range(len(data)):
         gen_data = data[generation, :, :]
         gen_row = {}
