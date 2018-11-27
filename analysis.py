@@ -6,13 +6,14 @@ import tests
 import utilities
 
 
-def summarize_trial(trial_info, data):
+def summarize_trial(trial_info, data, parents):
     """Converts the output of one trial of iteration into a Pandas DataFrame,
     recording various metrics at each generation.
 
     Args:
         trial_info: dict, containing the args passed to iteration.iterate
         data: 3-D numpy array.  Dim 0: generations, Dim 1: model, Dim 2: agents
+        parents: 2-D numpy array.  Dim 0: generations, Dim 1: idx of parent
 
     Returns:
         a pd.DataFrame
@@ -48,11 +49,15 @@ def batch_convert_to_csv(fn_pattern):
     """
     for fname in glob.glob(fn_pattern):
         data = np.load(fname)
-        # NB: this trial_info assumes our naming convention from iteration.py,
+        # NB: parents and trial_info assumes our naming convention from iteration.py,
         # so is not generic
-        kvs = fname[:-4].split('+')
+        # in particular, the files are named path/to/trial_info_dir/quantifiers.ext and
+        # path/to/trial_info_dir/parents.ext
+        parents = np.load(fname.replace('quantifiers', 'parents'))
+        trial_root = fname.split('/')[-2]  # -1 is filename, -2 is directory we want
+        kvs = trial_root.split('+')
         trial_info = dict([kv.split('-') for kv in kvs])
-        table = summarize_trial(trial_info, data)
+        table = summarize_trial(trial_info, data, parents)
         old_ext_len = len(fname.split('.')[-1])
         table.to_csv(fname[:-(old_ext_len+1)] + '.csv')
 
