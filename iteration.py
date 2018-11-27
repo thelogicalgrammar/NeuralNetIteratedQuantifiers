@@ -4,19 +4,19 @@ import population as pop
 import numpy as np
 
 
-def iterate(n_generations, n_agents, bottleneck, length_models,
+def iterate(n_generations, n_agents, bottleneck, max_model_size,
             save_path=False, num_trial=None, num_epochs=1):
     # generate all the binary strings of the given length
     # possible_models is a 2d array, where each row is a model
-    possible_models = util.generate_list_models(length_models)
+    possible_models = util.generate_list_models(max_model_size)
     # create first generation
-    parent_generation = pop.Population(n_agents, length_models)
+    parent_generation = pop.Population(n_agents, max_model_size)
     # data is a 3-d numpy array with shape (# gen, # possible models, # agents)
     data = np.empty(shape=(n_generations+1, len(possible_models), n_agents))
 
     for n in range(n_generations):
         # the new generation is created
-        child_generation = pop.Population(n_agents, length_models)
+        child_generation = pop.Population(n_agents, max_model_size)
         # the new generation learns from the old one
         child_generation.learn_from_population(parent_generation,
                                                bottleneck,
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     parser.add_argument("--save_path", type=str, default="")
     parser.add_argument("--n_generations", type=int, default=100)
     parser.add_argument("--n_agents", type=int, default=1)
-    parser.add_argument("--length_models", type=int, default=3)
+    parser.add_argument("--max_model_size", type=int, default=3)
     parser.add_argument("--num_epochs", type=int, default=3)
 
     model_values = parser.parse_args()
