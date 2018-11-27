@@ -471,5 +471,4 @@ def check_quantity(list_models, map_lang):
 
 
 if __name__ == '__main__':
-    a = produce_random_quants(3, generate_list_models(3), 10, qtype="network")
-    np.save("/random_quantifiers", a)
+    pass
