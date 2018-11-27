@@ -49,7 +49,8 @@ if __name__ == "__main__":
     parser.add_argument("--num_epochs", type=int, default=3)
 
     input_values = parser.parse_args()
-    input_values.save_path += "+".join("{}-{}".format(key, value) for key, value in vars(input_values).items()
+    input_values.save_path += "+".join("{}-{}".format(key, value)
+                                       for key, value in sorted(vars(input_values).items())
                                        if key != "save_path")
 
     iterate(**vars(input_values))
