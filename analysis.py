@@ -2,8 +2,37 @@ import argparse
 import numpy as np
 import pandas as pd
 import glob
+from plotnine import *
 import tests
 import utilities
+
+
+def analyze_trials(file_pattern, first_n=10, last_n=50):
+    # TODO: get trial_info from dir names here as well?
+    data = pd.concat([
+        pd.read_csv(filename) for filename in glob.glob(file_pattern)
+    ], ignore_index=True)
+
+    first_data = data[data['generation'] < first_n]
+    last_data = data[data['generation'] > data['generation'].max() - last_n]
+
+    first_monotonicities = pd.DataFrame(
+        pd.concat([first_data[col] for col in first_data.columns
+                   if col.startswith('monotonicity')]),
+        columns=['monotonicity'])
+    first_monotonicities['time'] = ['first_' + str(first_n)]
+
+    last_monotonicities = pd.DataFrame(
+        pd.concat([last_data[col] for col in last_data.columns
+                   if col.startswith('monotonicity')]),
+        columns=['monotonicity'])
+    last_monotonicities['time'] = ['last_' + str(last_n)]
+
+    monotonicities = pd.concat([first_monotonicities, last_monotonicities],
+                               ignore_index=True)
+
+    print(ggplot(monotonicities) +
+          geom_density(aes(x='monotonicity', colour='time')))
 
 
 def summarize_trial(trial_info, data, parents):
@@ -22,7 +51,8 @@ def summarize_trial(trial_info, data, parents):
     models = utilities.generate_list_models(int(trial_info['max_model_size']))
     for generation in range(len(data)):
         gen_data = data[generation, :, :]
-        gen_row = {}
+        gen_row = {'generation': generation,
+                   'num_trial': int(trial_info['num_trial'])}
         for agt in range(data.shape[-1]):
             # TODO: parameterize the per-agent methods to measure?
             # TODO: vectorize monotonicity etc so they apply to entire
@@ -74,3 +104,6 @@ if __name__ == '__main__':
 
     if args.mode == 'convert':
         batch_convert_to_csv(args.file_pattern)
+    elif args.mode == 'analyze':
+        # TODO: args to analyze_trials?
+        analyze_trials(args.file_pattern)
