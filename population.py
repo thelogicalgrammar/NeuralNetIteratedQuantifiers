@@ -139,5 +139,5 @@ class Population:
             models = np.random.randint(0, 2, size=(bottleneck_size, self.max_model_size))
             # make the parent produce the data for the sampled models
             parent_bools = parent.map(models)
-            child.learn(models, parent_bools, num_epochs)
+            child.learn(models, parent_bools, num_epochs=num_epochs)
         return parents
