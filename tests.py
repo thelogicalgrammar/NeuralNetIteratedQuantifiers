@@ -8,35 +8,49 @@ import seaborn
 import random as rnd
 
 
-def L1_dist(column1, column2):
-    return np.sum(np.absolute(column1 - column2)) / len(column1)
+def L1_dist(array1, array2):
+    """
+    Finds the proportion of models (rows) about which two sets of agents (columns) disagree.
+    :param array1: Array of shape (models, agents)
+    :param array2: Array of shape (models, agents)
+    :return: Total proportion of disagreement across all agents
+    """
+    assert(array1.shape == array2.shape)
+    return np.sum(np.absolute(array1 - array2)) / array1.size
 
 
-def check_agents_similarity(agent1, agent2, possible_inputs, mapping=False):
+def check_agents_similarity(agent1, agent2, all_models, mapping=False):
     """
     returns the proportion of the inputs about which the agents disagree if map==True
     or the average difference between their confidence level about each input if map==False
     """
-    judgments = create_languages_array([agent1, agent2], possible_inputs,
+    judgments = create_languages_array([agent1, agent2], all_models,
                                        mapping)
     # proportion of models where the judgments of the two agents are different
     prop_different = L1_dist(judgments[:, 0], judgments[:, 1])
     return prop_different
 
 
-def check_agent_quantifier_similarity(agent, quantifier, possible_inputs):
-    judgments = agent.map(possible_inputs)
+def check_agent_quantifier_similarity(agent, quantifier, all_models):
+    """
+    Returns the proportion of models where the agent differs from the quantifier
+    """
+    judgments = agent.map(all_models)
     prop_different = L1_dist(quantifier, judgments)
     return prop_different
 
 
 def agent_quantifier_test(input_length=None, quant=None, train_split=0.75):
+    """
+    Plots the difference between a random agent and a quantifier (random if not passed) as the agent observed
+    data produced from the quantifier
+    """
     if not input_length:
         input_length = 10
-    possible_inputs = generate_list_inputs(input_length)
-    quantifier = quant or np.random.randint(0, 2, size=(len(possible_inputs), 1))
-    possible_inputs, quantifier = shuffle_learning_input(possible_inputs, quantifier)
-    train_inputs, test_inputs = train_test_split(possible_inputs, train_split)
+    all_models = generate_list_inputs(input_length)
+    quantifier = quant or np.random.randint(0, 2, size=(len(all_models), 1))
+    all_models, quantifier = shuffle_learning_input(all_models, quantifier)
+    train_inputs, test_inputs = train_test_split(all_models, train_split)
     train_quant, test_quant = train_test_split(quantifier, train_split)
 
     agent = pop.NetworkAgent(input_length)
@@ -47,10 +61,10 @@ def agent_quantifier_test(input_length=None, quant=None, train_split=0.75):
         inputs = train_inputs[random_indices]
         production = train_quant[random_indices]
         # if i == 0:
-        #     seaborn.distplot(agent.produce(possible_inputs), label='initial')
+        #     seaborn.distplot(agent.produce(all_models), label='initial')
         agent.learn(inputs, production)
         # if i == 0:
-        #     seaborn.distplot(agent.produce(possible_inputs), label='after one')
+        #     seaborn.distplot(agent.produce(all_models), label='after one')
         #     plt.legend()
         #     plt.show()
         train_distances.append(check_agent_quantifier_similarity(
@@ -69,34 +83,39 @@ def agent_agent_test():
     sees more and more of the first agent's output
     """
     input_length = 10
-    possible_inputs = generate_list_inputs(input_length)
+    all_models = generate_list_inputs(input_length)
     agent1, agent2 = pop.NetworkAgent(input_length), pop.NetworkAgent(input_length)
     distances = []
     for i in range(1000):
-        random_indices = np.random.randint(0, len(possible_inputs),
-                                           int(0.7*len(possible_inputs)))
-        # inputs are randomly picked rows of possible_inputs
-        inputs = possible_inputs[random_indices]
+        random_indices = np.random.randint(0, len(all_models),
+                                           int(0.7*len(all_models)))
+        # inputs are randomly picked rows of all_models
+        inputs = all_models[random_indices]
         production = agent1.map(inputs)
         if i == 0:
-            seaborn.distplot(agent1.produce(possible_inputs), label='initial')
+            seaborn.distplot(agent1.produce(all_models), label='initial')
             plt.show()
         agent2.learn(inputs, production)
-        distances.append(check_agents_similarity(agent1, agent2, possible_inputs))
+        distances.append(check_agents_similarity(agent1, agent2, all_models))
     plt.scatter(range(len(distances)), distances)
     plt.show()
 
 
-def random_quant(input_length, possible_inputs, qtype="random"):
+def random_quant(input_length, all_models, qtype="random"):
+    """
+    Produces a random quantifier with a given length and optional type.
+    Possible types: "random", "mon".
+    # TODO: implement more quantifier types
+    """
 
     if qtype=="random":
-        return np.random.randint(2, size=(len(possible_inputs), 1))
+        return np.random.randint(2, size=(len(all_models), 1))
 
     if qtype=="mon":
         # create random monotone quantifier
         bound_position = np.random.randint(input_length)
         direction = np.random.randint(2)
-        sizes = np.sum(possible_inputs, axis=1)
+        sizes = np.sum(all_models, axis=1)
         return np.where(
             ((direction == 1) & (sizes >= bound_position)) | ((direction == 0) & (sizes <= bound_position)), 1, 0).reshape(-1, 1)
 
@@ -104,12 +123,11 @@ def random_quant(input_length, possible_inputs, qtype="random"):
         # create random convex (possible monotone) quantifier
         bounds_position = np.sort(np.random.choice(input_length, size=2, replace=False))
         direction = np.random.randint(2)
-        counts = np.sum(possible_inputs, axis=1)
+        counts = np.sum(all_models, axis=1)
         quant = (counts <= bounds_position[0]) | (counts >= bounds_position[1]) == direction
         return quant.reshape(-1, 1).astype(np.int)
 
     else:
-        # TODO: implement more quantifier types
         raise ValueError("Value of quantifier type not recognized. Either mon, conv, or random")
 
 
@@ -118,12 +136,12 @@ def test_monotonicity_preference():
     Check whether the agents are faster to learn monotone than non-monotone quantifiers
     """
     input_length = 7
-    possible_inputs = generate_list_inputs(input_length)
+    all_models = generate_list_inputs(input_length)
     mon_dist = []
     non_mon_dist = []
     for i in range(100):
-        mon_quant = random_quant(input_length, possible_inputs, type="mon")
-        non_mon_quant = random_quant(input_length, possible_inputs)
+        mon_quant = random_quant(input_length, all_models, qtype="mon")
+        non_mon_quant = random_quant(input_length, all_models)
         mon_dist.append(agent_quantifier_test(input_length, mon_quant))
         non_mon_dist.append(agent_quantifier_test(input_length, non_mon_quant))
         print(i)
@@ -134,8 +152,10 @@ def test_monotonicity_preference():
 
 
 def check_probability_matching_few_models():
-    # do neural nets do probability matching?
-    # train them on conflicting input with hand selected models
+    """
+    train neural nets on conflicting input with hand selected models to check if they do probability matching
+    """
+
     repetitions_per_model = 10000
     prob_models = [0.1, 0.9]
     models = [[0, 1, 1], [1, 1, 0]]
@@ -160,29 +180,38 @@ def check_probability_matching_other_agent(real_teacher, uncertainty=1.):
     (i.e. a confident teacher).
     """
     input_length = 7
-    possible_inputs = generate_list_inputs(input_length)
+    all_models = generate_list_inputs(input_length)
     agent2 = pop.NetworkAgent(input_length)
     if real_teacher:
         agent1 = pop.NetworkAgent(input_length)
     else:
-         agent1 = pop.SimulatedTeacher(input_length, uncertainty)
+         agent1 = pop.ConfidenceTeacher(input_length, uncertainty)
 
     distances = []
     for i in range(3000):
-        random_indices = np.random.randint(0, len(possible_inputs),
-                                           int(0.9*len(possible_inputs))
+        random_indices = np.random.randint(0, len(all_models),
+                                           int(0.9*len(all_models))
                                            )
-        # inputs are randomly picked rows of possible_inputs
-        inputs = possible_inputs[random_indices]
+        # inputs are randomly picked rows of all_models
+        inputs = all_models[random_indices]
         production = agent1.sample(inputs)
         agent2.learn(inputs, production)
-        distances.append(check_agents_similarity(agent1, agent2, possible_inputs))
+        distances.append(check_agents_similarity(agent1, agent2, all_models))
 
     plt.scatter(range(len(distances)), distances)
     plt.show()
 
 
 def shuffle_learning_input(inputs, parent_bools, restrict=1.):
+    """
+    Gets data that an agent learns from and shuffles and restricts it.
+    Note that the returned data is simply a restricted and shuffled version of a quantifier, without repeated models.
+    :param inputs: array containing all the models, i.e. all truth value combinations over objects.
+    Shape is (# models, # objects)
+    :param parent_bools: a full truth value distribution over those models, i.e. a quantifier
+    :param restrict: which proportion of the shuffled quantifier to return
+    :return:
+    """
     learning_subset_indices = np.random.randint(len(inputs), size=int(len(inputs) * restrict))
     models = inputs[learning_subset_indices, :]
     truth_values = parent_bools[learning_subset_indices, :]
@@ -202,25 +231,25 @@ def test_order_importance():
     if those observations are always in the same order rather than shifted order
     """
     input_length = 7
-    possible_inputs = generate_list_inputs(input_length)
+    all_models = generate_list_inputs(input_length)
     n_tests = 1000
 
     # check for different quantifiers
     for i in range(1):
-        quantifier = random_quant(input_length, possible_inputs)
-        models, truth_values = shuffle_learning_input(possible_inputs, quantifier, restrict=0.7)
+        quantifier = random_quant(input_length, all_models)
+        models, truth_values = shuffle_learning_input(all_models, quantifier, restrict=0.7)
 
         # unshuffled condition
         learners = [pop.NetworkAgent(input_length) for _ in range(n_tests)]
         map(lambda agent: agent.learn(models, truth_values, shuffle_by_epoch=False), learners)
         # unshuffled_test is the array of the languages learned from the quantifier without shuffling the input
-        unshuffled_test = create_languages_array(learners, possible_inputs)
+        unshuffled_test = create_languages_array(learners, all_models)
 
         # shuffled condition
         learners = [pop.NetworkAgent(input_length) for _ in range(n_tests)]
         map(lambda agent: agent.learn(shuffle_learning_input(models, truth_values)), learners)
         # shuffled_test is the array of the languages learned from the quantifier when shuffling the input
-        shuffled_test = create_languages_array(learners, possible_inputs)
+        shuffled_test = create_languages_array(learners, all_models)
 
         # calculate the standard deviation in what the agents learned for every model
         unshuffled_std = np.std(unshuffled_test, axis=1)
@@ -234,15 +263,21 @@ def test_order_importance():
         plt.show()
 
 
-def measure_upward_monotonicity(possible_inputs, quantifier):
+def measure_upward_monotonicity(all_models, quantifier):
+    """
+
+    :param all_models:
+    :param quantifier:
+    :return:
+    """
     if np.all(quantifier) or not np.any(quantifier):
         return 1
     props = []
     #only consider those models for which the quantifier is true (non zero returns indices)
     for i in np.nonzero(quantifier.flatten() == 1)[0]:
-        model = possible_inputs[i, :]
-        tiled_model = np.tile(model, (len(possible_inputs), 1))
-        extends = np.all(tiled_model*possible_inputs == tiled_model, axis=1).flatten()
+        model = all_models[i, :]
+        tiled_model = np.tile(model, (len(all_models), 1))
+        extends = np.all(tiled_model * all_models == tiled_model, axis=1).flatten()
         #proportion of true extensions of that model for the quantifier
         props.append(np.sum(quantifier[extends])/np.sum(extends))
     return np.mean(props)
@@ -266,10 +301,10 @@ def quantity_memoized(inputs_string, quantifier_string):
     return check_quantity(inputs, quantifier)
 
 
-def measure_monotonicity(possible_inputs, quantifier, type="extensions"):
+def measure_monotonicity(all_models, quantifier, type="extensions"):
     if type == "extensions":
-        return np.max([measure_upward_monotonicity(possible_inputs, quantifier),
-                    measure_upward_monotonicity(1-possible_inputs, 1-quantifier)])
+        return np.max([measure_upward_monotonicity(all_models, quantifier),
+                    measure_upward_monotonicity(1-all_models, 1-quantifier)])
     elif type == "step":
         pass
 
@@ -285,35 +320,56 @@ def quantifiers_in_order_of_monotonicity(l):
         pprint([(quantifier, mon_value) for quantifier, mon_value in zip(quantifiers[order_indices].tolist(), mon_values[order_indices].tolist())])
 
 
-def chance_property_distribution(l, property, agents, sample_size=1000):
+def chance_property_distribution(l, property, agents):
     """
+    Plots the distribution of a property in a random sample of agents and returns the randomly produced quantifiers
     :param l: max model length
     :param property: which property (as a function)
-    :param agent: list of agents
-    :param sample_size: how many agents to sample
-    :return: Distribution
+    :param agents: list of agents
+    :return: None
     """
     models = generate_list_inputs(l)
     # random_quants = np.random.randint(2, size=(sample_size, len(models)))
     random_quants = [agent.map(models) for agent in agents]
-    mons = [property(models, random_quant) for random_quant in random_quants]
-    seaborn.distplot(mons)
+    properties = [property(models, random_quant) for random_quant in random_quants]
+    seaborn.distplot(properties)
     plt.show()
 
 
-def detect_region_of_motion(first_distribution, second_distribution):
+def find_proportions_of_quantifiers()
+
+
+def detect_region_of_motion(random_proportions, generations):
     """
-    Hows the quantifiers that
-    :param first_distribution:
-    :param second_distribution:
+    Finds the quantifiers overrepresented in the generations given the random proportions
+    :param random_proportions: column array containing the proportion of each quantifier
+    :param generations:
     :return:
     """
     pass
 
 
+def inter_generational_movement_speed(all_models, generations, parents):
+    """
+    Finds the speed at which languages as changing as the generations go by
+    In an ideal case, it should start fast and then get slow as the simulation finds a spot it likes
+    in the language space.
+    TODO: Test this function
+    :param all_models: all models
+    :param generations: a 3d array with shape (generations, models, agents)
+    :param parents: a dataframe with shape (len(generations)-1), generations.shape[2]) that gives for each agent
+    the index of its parent in the previous generation
+    :return: the movement speed for each successive generation.
+    """
+    changes = []
+    for gen_index in range(1, len(generations)):
+        children = generations[gen_index]
+        parents = generations[gen_index-1, :, parents[gen_index]]
+        changes.append(L1_dist(parents, children))
+
+
 def check_quantity(list_inputs, map_lang):
     # TODO: consider vectorizing across first axis (i.e. generation) of the 3-d results array
-    # TODO: this function is written pretty badly
     """
     Calculates quantity as 1 - H(quantifier is true at the model | model size)
     """
