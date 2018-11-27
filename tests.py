@@ -354,13 +354,15 @@ def detect_region_of_motion(random_unique_quantifiers, random_proportions, gener
     # get the distribution over quantifiers in generations
     quantifiers_in_generations = np.empty(shape=(generations.shape[1], len(generations) * generations.shape[2]))
 
-    # quantifiers_in_generations = np.concatenate(np.dsplit(generations), axis=)
+    splitted_generations = generations, np.arange(len(generations))
+    print(splitted_generations)
+    # quantifiers_in_generations = np.concatenate(np.split(), axis=)
+
     # observed_unique_quantifiers, counts_observed_quantifiers = np.unique()
     # observed_proportions_quantifiers =
 
     # does add-1 Laplace smoothing to the categorical distribution containing the union of the quantifiers in
     # generations and in random_unique_quantifiers
-
 
 
 def inter_generational_movement_speed(generations, parents):
@@ -417,7 +419,7 @@ def check_quantity(list_models, map_lang):
 
 
 if __name__ == '__main__':
-    chance_property_distribution(10, measure_monotonicity, [pop.NetworkAgent(10) for _ in range(1000)])
+    # chance_property_distribution(10, measure_monotonicity, [pop.NetworkAgent(10) for _ in range(1000)])
     """
     # quantifiers_in_order_of_monotonicity(3)
 
