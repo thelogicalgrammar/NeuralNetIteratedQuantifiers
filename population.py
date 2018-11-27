@@ -7,10 +7,10 @@ import torch.nn.functional as F
 
 
 class MLP(nn.Module):
-    def __init__(self, model_length):
+    def __init__(self, max_model_size):
         super(MLP, self).__init__()
         # TODO: parameterize this structure
-        self.fc1 = nn.Linear(model_length, 16)
+        self.fc1 = nn.Linear(max_model_size, 16)
         self.fc2 = nn.Linear(16, 16)
         self.bn = nn.BatchNorm1d(16)
         self.output = nn.Linear(16, 1)
@@ -26,23 +26,24 @@ class MLP(nn.Module):
 
 class Agent:
 
-    def produce(self, agent_model):
+    def produce(self, models_to_consider):
         pass
 
-    def map(self, agent_model):
+    def map(self, models_to_consider):
         """
         Returns 0 or 1, by 'argmaxing' the probabilities, i.e. returning
         whichever one had higher probability.
         """
-        return np.around(self.produce(agent_model))
+        return np.around(self.produce(models_to_consider))
 
-    def sample(self, agent_model):
+    def sample(self, models_to_consider):
         """
+        models_to_consider is an array containing models as rows
         Returns 0 or 1 for some models, by sampling from the network's output
         probability.
         """
 
-        probabilities = self.produce(agent_model)
+        probabilities = self.produce(models_to_consider)
         uniforms = np.random.rand(len(probabilities), 1)
         # choices: (N, 1) shape of booleans
         choices = uniforms < probabilities
@@ -52,44 +53,44 @@ class Agent:
 
 class FixedAgent(Agent):
 
-    def __init__(self, model_length):
-        self.possible_models = generate_list_models(model_length)
+    def __init__(self, max_model_size):
+        self.possible_models = generate_list_models(max_model_size)
         self.confidence = None
 
-    def produce(self, agent_model):
+    def produce(self, models_to_consider):
         # returns the confidence for each model (row) of agent_model
         indices = np.apply_along_axis(
             lambda row: np.argwhere(np.all(row == self.possible_models, axis=1)),
             axis=1,
-            arr=agent_model
+            arr=models_to_consider
         ).flatten()
         return self.confidence[indices]
 
 
 class ConfidenceTeacher(FixedAgent):
-    def __init__(self, model_length, uncertainty):
+    def __init__(self, max_model_size, uncertainty):
         """
         model length is the max model length
         0 < uncertainty
         For values < than 1, the agent prefers either true or false
         For values > than 1, the agent prefers to be neutral (i.e. around 0.5)
         """
-        super(ConfidenceTeacher, self).__init__(model_length)
+        super(ConfidenceTeacher, self).__init__(max_model_size)
         self.confidence = np.random.beta(uncertainty, uncertainty,
                                          size=(len(self.possible_models), 1))
 
 
 class UniformRandomAgent(FixedAgent):
 
-    def __init__(self, model_length):
-        super(UniformRandomAgent, self).__init__(model_length)
+    def __init__(self, max_model_size):
+        super(UniformRandomAgent, self).__init__(max_model_size)
         self.confidence = np.random.uniform(
             size=(len(self.possible_models), 1))
 
 
 class NetworkAgent(Agent):
-    def __init__(self, model_length):
-        self.model = MLP(model_length)
+    def __init__(self, max_model_size):
+        self.model = MLP(max_model_size)
 
     def learn(self, models, parent_bools, batch_size=32, num_epochs=3, shuffle_by_epoch=True):
         # TODO: play with options here?
@@ -114,15 +115,15 @@ class NetworkAgent(Agent):
                 loss.backward()
                 optim.step()
 
-    def produce(self, agent_model):
-        return self.model(agent_model).detach().numpy()
+    def produce(self, models_to_consider):
+        return self.model(models_to_consider).detach().numpy()
 
 
 class Population:
-    def __init__(self, size, model_length):
-        self.model_length = model_length
+    def __init__(self, size, max_model_size):
+        self.max_model_size = max_model_size
         # list of agent objects
-        self.agents = [NetworkAgent(model_length) for _ in range(size)]
+        self.agents = [NetworkAgent(max_model_size) for _ in range(size)]
 
     def learn_from_population(self, parent_pop, bottleneck_size, num_epochs=1):
         """
@@ -132,7 +133,7 @@ class Population:
         """
         for child in self.agents:
             parent = rnd.choice(parent_pop.agents)
-            models = np.random.randint(0, 2, size=(bottleneck_size, self.model_length))
+            models = np.random.randint(0, 2, size=(bottleneck_size, self.max_model_size))
             # make the parent produce the data for the sampled models
             parent_bools = parent.map(models)
             child.learn(models, parent_bools, num_epochs)
