@@ -16,9 +16,22 @@ def gather_columns(data, prefix):
 
 def analyze_trials(file_pattern, first_n=10, last_n=50):
     # TODO: get trial_info from dir names here as well?
-    data = pd.concat([
-        pd.read_csv(filename) for filename in glob.glob(file_pattern)
-    ], ignore_index=True)
+    data = pd.DataFrame()
+    fnames = glob.glob(file_pattern)
+    for idx in range(len(fnames)):
+        trial = pd.read_csv(fnames[idx])
+        trial['num_trial'] = idx
+        data = data.append(trial, ignore_index=True)
+    data['num_trial'] = data['num_trial'].astype('category')
+
+    data['mean_monotonicity'] = data[
+        [col for col in data.columns
+         if col.startswith('monotonicity')]].mean(axis=1)
+
+    print(ggplot(data)
+          + geom_line(aes(x='generation', y='mean_monotonicity',
+                          group='num_trial', colour='num_trial'))
+          + xlim((0, 100)))
 
     first_data = data[data['generation'] < first_n]
     last_data = data[data['generation'] > data['generation'].max() - last_n]
@@ -33,7 +46,8 @@ def analyze_trials(file_pattern, first_n=10, last_n=50):
                                ignore_index=True)
 
     print(ggplot(monotonicities) +
-          geom_density(aes(x='monotonicity', colour='time')))
+          geom_density(aes(x='monotonicity', colour='time', fill='time'),
+                       alpha=0.2))
 
     first_quantities = gather_columns(first_data, 'quantity')
     first_quantities['time'] = 'first_' + str(first_n)

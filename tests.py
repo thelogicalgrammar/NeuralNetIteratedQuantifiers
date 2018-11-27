@@ -320,6 +320,10 @@ def measure_monotonicity(all_models, quantifier, type="extensions"):
         pass
 
 
+def measure_negation_monotonicity(all_models, quantifier):
+    return measure_upward_monotonicity(all_models, 1-quantifier)
+
+
 def quantifiers_in_order_of_monotonicity(l):
     models = generate_list_models(l)
     quantifiers = generate_list_models(len(models)).astype(int)
