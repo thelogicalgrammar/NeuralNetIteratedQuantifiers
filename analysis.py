@@ -33,6 +33,8 @@ def summarize_trial(trial_info, data, parents):
             gen_row['quantity_' + str(agt)] = tests.check_quantity(
                 models, gen_agt_map)
         frame = frame.append(gen_row, ignore_index=True)
+    frame['inter_generational_movement_speed'] = (
+        tests.inter_generational_movement_speed(data, parents))
     return frame
 
 
@@ -53,7 +55,7 @@ def batch_convert_to_csv(fn_pattern):
         # so is not generic
         # in particular, the files are named path/to/trial_info_dir/quantifiers.ext and
         # path/to/trial_info_dir/parents.ext
-        parents = np.load(fname.replace('quantifiers', 'parents'))
+        parents = np.load(fname.replace('quantifiers', 'parents')).astype(int)
         trial_root = fname.split('/')[-2]  # -1 is filename, -2 is directory we want
         kvs = trial_root.split('+')
         trial_info = dict([kv.split('-') for kv in kvs])
