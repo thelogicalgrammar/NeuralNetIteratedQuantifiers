@@ -7,6 +7,13 @@ import tests
 import utilities
 
 
+def gather_columns(data, prefix):
+    return pd.DataFrame(
+        pd.concat([data[col] for col in data.columns
+                   if col.startswith(prefix)]),
+        columns=[prefix])
+
+
 def analyze_trials(file_pattern, first_n=10, last_n=50):
     # TODO: get trial_info from dir names here as well?
     data = pd.concat([
@@ -16,23 +23,29 @@ def analyze_trials(file_pattern, first_n=10, last_n=50):
     first_data = data[data['generation'] < first_n]
     last_data = data[data['generation'] > data['generation'].max() - last_n]
 
-    first_monotonicities = pd.DataFrame(
-        pd.concat([first_data[col] for col in first_data.columns
-                   if col.startswith('monotonicity')]),
-        columns=['monotonicity'])
-    first_monotonicities['time'] = ['first_' + str(first_n)]
+    first_monotonicities = gather_columns(first_data, 'monotonicity')
+    first_monotonicities['time'] = 'first_' + str(first_n)
 
-    last_monotonicities = pd.DataFrame(
-        pd.concat([last_data[col] for col in last_data.columns
-                   if col.startswith('monotonicity')]),
-        columns=['monotonicity'])
-    last_monotonicities['time'] = ['last_' + str(last_n)]
+    last_monotonicities = gather_columns(last_data, 'monotonicity')
+    last_monotonicities['time'] = 'last_' + str(last_n)
 
     monotonicities = pd.concat([first_monotonicities, last_monotonicities],
                                ignore_index=True)
 
     print(ggplot(monotonicities) +
           geom_density(aes(x='monotonicity', colour='time')))
+
+    first_quantities = gather_columns(first_data, 'quantity')
+    first_quantities['time'] = 'first_' + str(first_n)
+
+    last_quantities = gather_columns(last_data, 'quantity')
+    last_quantities['time'] = 'last_' + str(last_n)
+
+    quantities = pd.concat([first_quantities, last_quantities],
+                               ignore_index=True)
+
+    print(ggplot(quantities) +
+          geom_density(aes(x='quantity', colour='time')))
 
 
 def summarize_trial(trial_info, data, parents):
