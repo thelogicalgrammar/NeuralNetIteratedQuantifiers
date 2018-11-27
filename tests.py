@@ -392,14 +392,19 @@ def detect_region_of_motion(random_quantifiers, generations):
     random_surprisals = {
         quant: np.log2(value) - lognormalization_constant_random for quant, value in random_counts_dict.items()}
 
-    # lognormalizes the dict of observed quantifiers and calculates the surprisal in the observed list
-    lognormalization_constant_observed = np.log2(np.sum(list(observed_counts_dict.values())))
-    observed_surprisals = {
-        quant: np.log2(value) - lognormalization_constant_observed for quant, value in observed_counts_dict.items()}
+    # # lognormalizes the dict of observed quantifiers and calculates the surprisal in the observed list
+    # lognormalization_constant_observed = np.log2(np.sum(list(observed_counts_dict.values())))
+    # observed_surprisals = {
+    #     quant: np.log2(value) - lognormalization_constant_observed for quant, value in observed_counts_dict.items()}
 
     # calculates the difference in surprisals
-    differential_surprisals_observed = {quant: observed_surprisals[quant] - random_surprisals[quant] for quant in observed_surprisals.keys()}
-    print(differential_surprisals_observed)
+    # differential_surprisals_observed = {quant: observed_surprisals[quant] - random_surprisals[quant] for quant in observed_surprisals.keys()}
+
+    # calculate the surprisal of observing the observed quantifiers the number of times they were observed
+    # given the distribution from the random quantifiers
+    conditional_surprisal = {quant: -random_surprisals[quant] * observed_counts_dict[quant] for quant in observed_counts_dict.keys()}
+    # pprint(conditional_surprisal)
+    return conditional_surprisal
 
 
 def inter_generational_movement_speed(generations, parents):
@@ -407,7 +412,6 @@ def inter_generational_movement_speed(generations, parents):
     Finds the speed at which languages as changing as the generations go by
     In an ideal case, it should start fast and then get slow as the simulation finds a spot it likes
     in the language space.
-    TODO: add a functionality to iteration.py that records whose parents
     TODO: Test this function
     :param all_models: all models as rows
     :param generations: a 3d array with shape (generations, models, agents)
