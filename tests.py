@@ -340,33 +340,48 @@ def find_proportions_of_quantifiers():
     pass
 
 
-def detect_region_of_motion(random_proportions, generations):
+def detect_region_of_motion(random_unique_quantifiers, random_proportions, generations):
     """
-    Finds the quantifiers overrepresented in the generations given the random proportions
-    :param random_proportions: column array containing the proportion of each quantifier
-    :param generations:
-    :return:
+    Finds the quantifiers overrepresented in generations given their proportions in a random set of agents
+    all_models, quantifiers, and random_proportions are meant to be produced by find_proportions_of_quantifiers
+    :param: random_unique_quantifiers: unique quantifiers observed in the random sample. Shape (# models, # quantifiers)
+    :param random_proportions: row array containing the proportion of each quantifier in random_unique_quantifiers
+    :param generations: a 3d array with shape (# generations, # models, # agents)
+    :return: two arrays. The first array is the array of quantifiers in generations that are overrepresented given the
+    random distribution. The second is a row vector with a measure of the unexpectedness of the quants in the first array.
     """
-    pass
+
+    # get the distribution over quantifiers in generations
+    quantifiers_in_generations = np.empty(shape=(generations.shape[1], len(generations) * generations.shape[2]))
+
+    # quantifiers_in_generations = np.concatenate(np.dsplit(generations), axis=)
+    # observed_unique_quantifiers, counts_observed_quantifiers = np.unique()
+    # observed_proportions_quantifiers =
+
+    # does add-1 Laplace smoothing to the categorical distribution containing the union of the quantifiers in
+    # generations and in random_unique_quantifiers
 
 
-def inter_generational_movement_speed(all_models, generations, parents):
+
+def inter_generational_movement_speed(generations, parents):
     """
     Finds the speed at which languages as changing as the generations go by
     In an ideal case, it should start fast and then get slow as the simulation finds a spot it likes
     in the language space.
+    TODO: add a functionality to iteration.py that records whose parents
     TODO: Test this function
-    :param all_models: all models
+    :param all_models: all models as rows
     :param generations: a 3d array with shape (generations, models, agents)
     :param parents: a dataframe with shape (len(generations)-1), generations.shape[2]) that gives for each agent
     the index of its parent in the previous generation
     :return: the movement speed for each successive generation.
     """
-    changes = []
+    changes = [0, ]
     for gen_index in range(1, len(generations)):
         children = generations[gen_index]
         parents = generations[gen_index-1, :, parents[gen_index]]
         changes.append(L1_dist(parents, children))
+    return np.array(changes)
 
 
 def check_quantity(list_models, map_lang):
