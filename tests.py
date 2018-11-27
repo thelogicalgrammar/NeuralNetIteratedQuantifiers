@@ -336,7 +336,8 @@ def chance_property_distribution(l, property, agents):
     plt.show()
 
 
-def find_proportions_of_quantifiers()
+def find_proportions_of_quantifiers():
+    pass
 
 
 def detect_region_of_motion(random_proportions, generations):
