@@ -1,4 +1,5 @@
 import argparse
+import os
 import utilities as util
 import population as pop
 import numpy as np
@@ -13,14 +14,17 @@ def iterate(n_generations, n_agents, bottleneck, max_model_size,
     parent_generation = pop.Population(n_agents, max_model_size)
     # data is a 3-d numpy array with shape (# gen, # possible models, # agents)
     data = np.empty(shape=(n_generations+1, len(possible_models), n_agents))
+    parent_list = np.empty(shape=(n_generations+1, n_agents))
+    parent_list[0, :] = [0]*n_agents
 
     for n in range(n_generations):
         # the new generation is created
         child_generation = pop.Population(n_agents, max_model_size)
         # the new generation learns from the old one
-        child_generation.learn_from_population(parent_generation,
-                                               bottleneck,
-                                               num_epochs)
+        parents = child_generation.learn_from_population(parent_generation,
+                                                         bottleneck,
+                                                         num_epochs)
+        parent_list[n+1] = parents
         # stores some data to be analyzed later!
         data[n] = util.create_languages_array(parent_generation.agents, possible_models)
         # the new generation becomes the old generation, ready to train the next generation
@@ -30,7 +34,10 @@ def iterate(n_generations, n_agents, bottleneck, max_model_size,
     # stores the data from the last trained generation
     data[n_generations] = util.create_languages_array(parent_generation.agents, possible_models)
     if save_path:
-        np.save(model_values.save_path, data)
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+        np.save(model_values.save_path + '/quantifiers', data)
+        np.save(model_values.save_path + '/parents', parent_list)
 
     return data
 
