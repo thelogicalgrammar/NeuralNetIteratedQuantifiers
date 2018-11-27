@@ -18,7 +18,7 @@ def summarize_trial(trial_info, data):
         a pd.DataFrame
     """
     frame = pd.DataFrame()
-    models = utilities.generate_list_models(int(trial_info['length_inputs']))
+    models = utilities.generate_list_models(int(trial_info['max_model_size']))
     for generation in range(len(data)):
         gen_data = data[generation, :, :]
         gen_row = {}
@@ -62,7 +62,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--mode', type=str, choices=['convert', 'analyze'],
                         default='convert')
-    parser.add_argument('--file_pattern', type=str, default='*.npy')
+    parser.add_argument('--file_pattern', type=str, default='*/quantifiers.npy')
     args = parser.parse_args()
 
     if args.mode == 'convert':
