@@ -1,6 +1,6 @@
 from functools import lru_cache
 import numpy as np
-from utilities import generate_list_inputs, create_languages_array
+from utilities import generate_list_models, create_languages_array
 import population as pop
 from pprint import pprint
 import matplotlib.pyplot as plt
@@ -21,8 +21,8 @@ def L1_dist(array1, array2):
 
 def check_agents_similarity(agent1, agent2, all_models, mapping=False):
     """
-    returns the proportion of the inputs about which the agents disagree if map==True
-    or the average difference between their confidence level about each input if map==False
+    returns the proportion of the models about which the agents disagree if map==True
+    or the average difference between their confidence level about each model if map==False
     """
     judgments = create_languages_array([agent1, agent2], all_models,
                                        mapping)
@@ -40,37 +40,37 @@ def check_agent_quantifier_similarity(agent, quantifier, all_models):
     return prop_different
 
 
-def agent_quantifier_test(input_length=None, quant=None, train_split=0.75):
+def agent_quantifier_test(max_model_size=None, quant=None, train_split=0.75):
     """
     Plots the difference between a random agent and a quantifier (random if not passed) as the agent observed
     data produced from the quantifier
     """
-    if not input_length:
-        input_length = 10
-    all_models = generate_list_inputs(input_length)
+    if not max_model_size:
+        max_model_size = 10
+    all_models = generate_list_models(max_model_size)
     quantifier = quant or np.random.randint(0, 2, size=(len(all_models), 1))
-    all_models, quantifier = shuffle_learning_input(all_models, quantifier)
-    train_inputs, test_inputs = train_test_split(all_models, train_split)
+    all_models, quantifier = shuffle_learning_model(all_models, quantifier)
+    train_models, test_models = train_test_split(all_models, train_split)
     train_quant, test_quant = train_test_split(quantifier, train_split)
 
-    agent = pop.NetworkAgent(input_length)
+    agent = pop.NetworkAgent(max_model_size)
     train_distances, test_distances = [], []
     for i in range(1000):
-        random_indices = np.random.randint(0, len(train_inputs),
-                                           int(0.7*len(train_inputs)))
-        inputs = train_inputs[random_indices]
+        random_indices = np.random.randint(0, len(train_models),
+                                           int(0.7*len(train_models)))
+        models = train_models[random_indices]
         production = train_quant[random_indices]
         # if i == 0:
         #     seaborn.distplot(agent.produce(all_models), label='initial')
-        agent.learn(inputs, production)
+        agent.learn(models, production)
         # if i == 0:
         #     seaborn.distplot(agent.produce(all_models), label='after one')
         #     plt.legend()
         #     plt.show()
         train_distances.append(check_agent_quantifier_similarity(
-            agent, train_quant, train_inputs))
+            agent, train_quant, train_models))
         test_distances.append(check_agent_quantifier_similarity(
-            agent, test_quant, test_inputs))
+            agent, test_quant, test_models))
     plt.scatter(range(len(train_distances)), train_distances)
     plt.scatter(range(len(test_distances)), test_distances)
     plt.show()
@@ -82,26 +82,26 @@ def agent_agent_test():
     Shows how the similarity between two agents evolves as the second agent
     sees more and more of the first agent's output
     """
-    input_length = 10
-    all_models = generate_list_inputs(input_length)
-    agent1, agent2 = pop.NetworkAgent(input_length), pop.NetworkAgent(input_length)
+    max_model_size = 10
+    all_models = generate_list_models(max_model_size)
+    agent1, agent2 = pop.NetworkAgent(max_model_size), pop.NetworkAgent(max_model_size)
     distances = []
     for i in range(1000):
         random_indices = np.random.randint(0, len(all_models),
                                            int(0.7*len(all_models)))
-        # inputs are randomly picked rows of all_models
-        inputs = all_models[random_indices]
-        production = agent1.map(inputs)
+        # models are randomly picked rows of all_models
+        models = all_models[random_indices]
+        production = agent1.map(models)
         if i == 0:
             seaborn.distplot(agent1.produce(all_models), label='initial')
             plt.show()
-        agent2.learn(inputs, production)
+        agent2.learn(models, production)
         distances.append(check_agents_similarity(agent1, agent2, all_models))
     plt.scatter(range(len(distances)), distances)
     plt.show()
 
 
-def random_quant(input_length, all_models, qtype="random"):
+def random_quant(max_model_size, all_models, qtype="random"):
     """
     Produces a random quantifier with a given length and optional type.
     Possible types: "random", "mon".
@@ -113,7 +113,7 @@ def random_quant(input_length, all_models, qtype="random"):
 
     if qtype=="mon":
         # create random monotone quantifier
-        bound_position = np.random.randint(input_length)
+        bound_position = np.random.randint(max_model_size)
         direction = np.random.randint(2)
         sizes = np.sum(all_models, axis=1)
         return np.where(
@@ -121,7 +121,7 @@ def random_quant(input_length, all_models, qtype="random"):
 
     elif qtype=="conv":
         # create random convex (possible monotone) quantifier
-        bounds_position = np.sort(np.random.choice(input_length, size=2, replace=False))
+        bounds_position = np.sort(np.random.choice(max_model_size, size=2, replace=False))
         direction = np.random.randint(2)
         counts = np.sum(all_models, axis=1)
         quant = (counts <= bounds_position[0]) | (counts >= bounds_position[1]) == direction
@@ -135,15 +135,15 @@ def test_monotonicity_preference():
     """
     Check whether the agents are faster to learn monotone than non-monotone quantifiers
     """
-    input_length = 7
-    all_models = generate_list_inputs(input_length)
+    max_model_size = 7
+    all_models = generate_list_models(max_model_size)
     mon_dist = []
     non_mon_dist = []
     for i in range(100):
-        mon_quant = random_quant(input_length, all_models, qtype="mon")
-        non_mon_quant = random_quant(input_length, all_models)
-        mon_dist.append(agent_quantifier_test(input_length, mon_quant))
-        non_mon_dist.append(agent_quantifier_test(input_length, non_mon_quant))
+        mon_quant = random_quant(max_model_size, all_models, qtype="mon")
+        non_mon_quant = random_quant(max_model_size, all_models)
+        mon_dist.append(agent_quantifier_test(max_model_size, mon_quant))
+        non_mon_dist.append(agent_quantifier_test(max_model_size, non_mon_quant))
         print(i)
     plt.plot(np.mean(mon_dist, axis=0), label="Mon")
     plt.plot(np.mean(non_mon_dist, axis=0), label="Non mon")
@@ -153,7 +153,7 @@ def test_monotonicity_preference():
 
 def check_probability_matching_few_models():
     """
-    train neural nets on conflicting input with hand selected models to check if they do probability matching
+    train neural nets on conflicting model with hand selected models to check if they do probability matching
     """
 
     repetitions_per_model = 10000
@@ -176,44 +176,44 @@ def check_probability_matching_other_agent(real_teacher, uncertainty=1.):
     the learner gets more and more towards 0.5, which is where the average random teacher starts from.
 
     So to see whether the learner is actually doing probability matching (rather than always getting maximally uncertain
-    when it receives contradictory inputs) use a simulated teacher, preferably with a low level of uncertainty
+    when it receives contradictory models) use a simulated teacher, preferably with a low level of uncertainty
     (i.e. a confident teacher).
     """
-    input_length = 7
-    all_models = generate_list_inputs(input_length)
-    agent2 = pop.NetworkAgent(input_length)
+    max_model_size = 7
+    all_models = generate_list_models(max_model_size)
+    agent2 = pop.NetworkAgent(max_model_size)
     if real_teacher:
-        agent1 = pop.NetworkAgent(input_length)
+        agent1 = pop.NetworkAgent(max_model_size)
     else:
-         agent1 = pop.ConfidenceTeacher(input_length, uncertainty)
+         agent1 = pop.ConfidenceTeacher(max_model_size, uncertainty)
 
     distances = []
     for i in range(3000):
         random_indices = np.random.randint(0, len(all_models),
                                            int(0.9*len(all_models))
                                            )
-        # inputs are randomly picked rows of all_models
-        inputs = all_models[random_indices]
-        production = agent1.sample(inputs)
-        agent2.learn(inputs, production)
+        # models are randomly picked rows of all_models
+        models = all_models[random_indices]
+        production = agent1.sample(models)
+        agent2.learn(models, production)
         distances.append(check_agents_similarity(agent1, agent2, all_models))
 
     plt.scatter(range(len(distances)), distances)
     plt.show()
 
 
-def shuffle_learning_input(inputs, parent_bools, restrict=1.):
+def shuffle_learning_model(models, parent_bools, restrict=1.):
     """
     Gets data that an agent learns from and shuffles and restricts it.
     Note that the returned data is simply a restricted and shuffled version of a quantifier, without repeated models.
-    :param inputs: array containing all the models, i.e. all truth value combinations over objects.
+    :param models: array containing all the models, i.e. all truth value combinations over objects.
     Shape is (# models, # objects)
     :param parent_bools: a full truth value distribution over those models, i.e. a quantifier
     :param restrict: which proportion of the shuffled quantifier to return
     :return:
     """
-    learning_subset_indices = np.random.randint(len(inputs), size=int(len(inputs) * restrict))
-    models = inputs[learning_subset_indices, :]
+    learning_subset_indices = np.random.randint(len(models), size=int(len(models) * restrict))
+    models = models[learning_subset_indices, :]
     truth_values = parent_bools[learning_subset_indices, :]
     return models, truth_values
 
@@ -230,25 +230,25 @@ def test_order_importance():
     Check whether agents learn a quantifier from the same observations more consistently (even if wrongly)
     if those observations are always in the same order rather than shifted order
     """
-    input_length = 7
-    all_models = generate_list_inputs(input_length)
+    max_model_size = 7
+    all_models = generate_list_models(max_model_size)
     n_tests = 1000
 
     # check for different quantifiers
     for i in range(1):
-        quantifier = random_quant(input_length, all_models)
-        models, truth_values = shuffle_learning_input(all_models, quantifier, restrict=0.7)
+        quantifier = random_quant(max_model_size, all_models)
+        models, truth_values = shuffle_learning_model(all_models, quantifier, restrict=0.7)
 
         # unshuffled condition
-        learners = [pop.NetworkAgent(input_length) for _ in range(n_tests)]
+        learners = [pop.NetworkAgent(max_model_size) for _ in range(n_tests)]
         map(lambda agent: agent.learn(models, truth_values, shuffle_by_epoch=False), learners)
-        # unshuffled_test is the array of the languages learned from the quantifier without shuffling the input
+        # unshuffled_test is the array of the languages learned from the quantifier without shuffling the model
         unshuffled_test = create_languages_array(learners, all_models)
 
         # shuffled condition
-        learners = [pop.NetworkAgent(input_length) for _ in range(n_tests)]
-        map(lambda agent: agent.learn(shuffle_learning_input(models, truth_values)), learners)
-        # shuffled_test is the array of the languages learned from the quantifier when shuffling the input
+        learners = [pop.NetworkAgent(max_model_size) for _ in range(n_tests)]
+        map(lambda agent: agent.learn(shuffle_learning_model(models, truth_values)), learners)
+        # shuffled_test is the array of the languages learned from the quantifier when shuffling the model
         shuffled_test = create_languages_array(learners, all_models)
 
         # calculate the standard deviation in what the agents learned for every model
@@ -284,21 +284,21 @@ def measure_upward_monotonicity(all_models, quantifier):
 
 
 @lru_cache(maxsize=None)
-def monotonicity_memoized(inputs_string, quantifier_string):
-    """inputs_string = models.tostring() for 2d int array models;
+def monotonicity_memoized(models_string, quantifier_string):
+    """models_string = models.tostring() for 2d int array models;
     quantifier_string = quantifier.tostring() for 1d int array """
     quantifier = np.frombuffer(quantifier_string, dtype=int)
-    inputs = np.frombuffer(inputs_string, dtype=int).reshape((len(quantifier), -1))
-    return measure_monotonicity(inputs, quantifier)
+    models = np.frombuffer(models_string, dtype=int).reshape((len(quantifier), -1))
+    return measure_monotonicity(models, quantifier)
 
 
 @lru_cache(maxsize=None)
-def quantity_memoized(inputs_string, quantifier_string):
-    """inputs_string = models.tostring() for 2d int array models;
+def quantity_memoized(models_string, quantifier_string):
+    """models_string = models.tostring() for 2d int array models;
     quantifier_string = quantifier.tostring() for 1d int array """
     quantifier = np.frombuffer(quantifier_string, dtype=int)
-    inputs = np.frombuffer(inputs_string, dtype=int).reshape((len(quantifier), -1))
-    return check_quantity(inputs, quantifier)
+    models = np.frombuffer(models_string, dtype=int).reshape((len(quantifier), -1))
+    return check_quantity(models, quantifier)
 
 
 def measure_monotonicity(all_models, quantifier, type="extensions"):
@@ -310,8 +310,8 @@ def measure_monotonicity(all_models, quantifier, type="extensions"):
 
 
 def quantifiers_in_order_of_monotonicity(l):
-    models = generate_list_inputs(l)
-    quantifiers = generate_list_inputs(len(models)).astype(int)
+    models = generate_list_models(l)
+    quantifiers = generate_list_models(len(models)).astype(int)
     mon_values = np.empty(shape=(len(quantifiers), 1))
     for i in range(len(quantifiers)):
         mon_values[i] = measure_monotonicity(models, quantifiers[i])
@@ -328,7 +328,7 @@ def chance_property_distribution(l, property, agents):
     :param agents: list of agents
     :return: None
     """
-    models = generate_list_inputs(l)
+    models = generate_list_models(l)
     # random_quants = np.random.randint(2, size=(sample_size, len(models)))
     random_quants = [agent.map(models) for agent in agents]
     properties = [property(models, random_quant) for random_quant in random_quants]
@@ -369,17 +369,17 @@ def inter_generational_movement_speed(all_models, generations, parents):
         changes.append(L1_dist(parents, children))
 
 
-def check_quantity(list_inputs, map_lang):
+def check_quantity(list_models, map_lang):
     # TODO: consider vectorizing across first axis (i.e. generation) of the 3-d results array
     """
     Calculates quantity as 1 - H(quantifier is true at the model | model size)
     """
     # prob_num is the array with the unconditional probability of each # of 1s in a random model
-    count_ones = np.count_nonzero(list_inputs, axis=1)
+    count_ones = np.count_nonzero(list_models, axis=1)
     num_arrays_of_length = np.unique(count_ones, return_counts=True)[1]
     prob_num = num_arrays_of_length / sum(num_arrays_of_length)
 
-    model_sizes = np.sum(list_inputs, axis=1)
+    model_sizes = np.sum(list_models, axis=1)
     true_model_sizes = model_sizes[np.nonzero(map_lang)]
     num_true_by_size = np.bincount(true_model_sizes,
                                    minlength=max(model_sizes)+1)
@@ -406,7 +406,7 @@ if __name__ == '__main__':
     """
     # quantifiers_in_order_of_monotonicity(3)
 
-    models_size_3 = generate_list_inputs(3)
+    models_size_3 = generate_list_models(3)
     def exactly_2(seq):
         return np.sum(seq) == 2
     def first_one(seq):
