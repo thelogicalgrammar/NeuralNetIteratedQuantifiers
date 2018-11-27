@@ -101,34 +101,45 @@ def agent_agent_test():
     plt.show()
 
 
-def random_quant(max_model_size, all_models, qtype="random"):
+def produce_random_quants(max_model_size, all_models, n_quants=1, qtype="random"):
     """
     Produces a random quantifier with a given length and optional type.
-    Possible types: "random", "mon".
+    Possible types: "random", "mon", "network", "uniform"
     # TODO: implement more quantifier types
     """
 
-    if qtype=="random":
-        return np.random.randint(2, size=(len(all_models), 1))
+    if n_quants > 1:
+        return np.column_stack(tuple(produce_random_quants(max_model_size, all_models) for _ in range(n_quants)))
 
-    if qtype=="mon":
-        # create random monotone quantifier
-        bound_position = np.random.randint(max_model_size)
-        direction = np.random.randint(2)
-        sizes = np.sum(all_models, axis=1)
-        return np.where(
-            ((direction == 1) & (sizes >= bound_position)) | ((direction == 0) & (sizes <= bound_position)), 1, 0).reshape(-1, 1)
+    if n_quants == 1:
 
-    elif qtype=="conv":
-        # create random convex (possible monotone) quantifier
-        bounds_position = np.sort(np.random.choice(max_model_size, size=2, replace=False))
-        direction = np.random.randint(2)
-        counts = np.sum(all_models, axis=1)
-        quant = (counts <= bounds_position[0]) | (counts >= bounds_position[1]) == direction
-        return quant.reshape(-1, 1).astype(np.int)
+        if qtype == "random":
+            return np.random.randint(2, size=(len(all_models), 1))
 
-    else:
-        raise ValueError("Value of quantifier type not recognized. Either mon, conv, or random")
+        if qtype == "mon":
+            # create random monotone quantifier
+            bound_position = np.random.randint(max_model_size)
+            direction = np.random.randint(2)
+            sizes = np.sum(all_models, axis=1)
+            return np.where(
+                ((direction == 1) & (sizes >= bound_position)) | ((direction == 0) & (sizes <= bound_position)), 1, 0).reshape(-1, 1)
+
+        elif qtype == "conv":
+            # create random convex (possible monotone) quantifier
+            bounds_position = np.sort(np.random.choice(max_model_size, size=2, replace=False))
+            direction = np.random.randint(2)
+            counts = np.sum(all_models, axis=1)
+            quant = (counts <= bounds_position[0]) | (counts >= bounds_position[1]) == direction
+            return quant.reshape(-1, 1).astype(np.int)
+
+        elif qtype == "network":
+            return pop.NetworkAgent(max_model_size).map(all_models).astype(np.int)
+
+        elif qtype == "uniform":
+            return pop.UniformRandomAgent(max_model_size).map(all_models).astype(np.int)
+
+        else:
+            raise ValueError("Value of quantifier type not recognized. Either mon, conv, or random")
 
 
 def test_monotonicity_preference():
@@ -140,8 +151,8 @@ def test_monotonicity_preference():
     mon_dist = []
     non_mon_dist = []
     for i in range(100):
-        mon_quant = random_quant(max_model_size, all_models, qtype="mon")
-        non_mon_quant = random_quant(max_model_size, all_models)
+        mon_quant = produce_random_quants(max_model_size, all_models, qtype="mon")
+        non_mon_quant = produce_random_quants(max_model_size, all_models)
         mon_dist.append(agent_quantifier_test(max_model_size, mon_quant))
         non_mon_dist.append(agent_quantifier_test(max_model_size, non_mon_quant))
         print(i)
@@ -236,7 +247,7 @@ def test_order_importance():
 
     # check for different quantifiers
     for i in range(1):
-        quantifier = random_quant(max_model_size, all_models)
+        quantifier = produce_random_quants(max_model_size, all_models)
         models, truth_values = shuffle_learning_model(all_models, quantifier, restrict=0.7)
 
         # unshuffled condition
@@ -336,33 +347,75 @@ def chance_property_distribution(l, property, agents):
     plt.show()
 
 
-def find_proportions_of_quantifiers():
-    pass
+def find_proportions_of_quantifiers(quantifiers):
+    """
+    :param quantifiers: A frame of quantifiers with shape (# models, # quantifiers)
+    :return: Two arrays; the first is a version of quantifiers without repetitions, the second is counts
+    """
+    unique_quantifiers, quantifiers_count = np.unique(quantifiers, return_counts=True, axis=1)
+    return unique_quantifiers, quantifiers_count
 
 
-def detect_region_of_motion(random_unique_quantifiers, random_proportions, generations):
+def counts_without_sort_and_unique(quantifiers):
+    """
+    :param quantifiers: Array of quantifiers, with shape (# models, # quantifiers)
+    :return: An array that for each quantifier says the number of repetitions of that quantifier
+    """
+    quantifiers, counts = np.unique(quantifiers)
+    unsorted_counts = np.zeros(shape=(quantifiers.shape[1], 1))
+    for quant_index in range(quantifiers.shape[1]):
+        indices_identical = np.where(quantifiers[:, quant_index] == quantifiers)
+        unsorted_counts[indices_identical] += 1
+
+
+def detect_region_of_motion(random_quantifiers, generations):
     """
     Finds the quantifiers overrepresented in generations given their proportions in a random set of agents
-    all_models, quantifiers, and random_proportions are meant to be produced by find_proportions_of_quantifiers
-    :param: random_unique_quantifiers: unique quantifiers observed in the random sample. Shape (# models, # quantifiers)
-    :param random_proportions: row array containing the proportion of each quantifier in random_unique_quantifiers
+    :param random_quantifiers: array of random quantifiers with shape (# models, # quantifiers)
     :param generations: a 3d array with shape (# generations, # models, # agents)
     :return: two arrays. The first array is the array of quantifiers in generations that are overrepresented given the
     random distribution. The second is a row vector with a measure of the unexpectedness of the quants in the first array.
     """
+    # transforms the generation into quantifiers (i.e. 0/1)
+    observed_generations = np.around(generations).astype(np.int)
+    splitted_generations = [i[0] for i in np.split(observed_generations, np.arange(1, len(observed_generations)))]
+    observed_quantifiers = np.column_stack(splitted_generations)
 
-    # get the distribution over quantifiers in generations
-    quantifiers_in_generations = np.empty(shape=(generations.shape[1], len(generations) * generations.shape[2]))
+    # get the unique quantifiers and the counts of the quantifiers
+    unique_random_quantifiers, counts_random_quantifiers = find_proportions_of_quantifiers(random_quantifiers)
+    unique_observed_quantifiers, counts_observed_quantifiers = find_proportions_of_quantifiers(observed_quantifiers)
 
-    splitted_generations = generations, np.arange(len(generations))
-    print(splitted_generations)
-    # quantifiers_in_generations = np.concatenate(np.split(), axis=)
+    # create dictionaries with string versions of quantifiers as keys and their count as value
+    observed_counts_dict = {str(quant): count for quant, count in zip(
+        unique_observed_quantifiers.T.tolist(), counts_observed_quantifiers.tolist()
+    )}
+    random_counts_dict = {str(quant): count for quant, count in zip(
+        unique_random_quantifiers.T.tolist(), counts_random_quantifiers.tolist()
+    )}
 
-    # observed_unique_quantifiers, counts_observed_quantifiers = np.unique()
-    # observed_proportions_quantifiers =
+    # does add-0.5 Laplace smoothing
+    observed_keys_not_in_random_dict = {key: 0. for key in observed_counts_dict.keys() - random_counts_dict.keys()}
+    random_counts_dict.update(observed_keys_not_in_random_dict)
+    random_counts_dict = {key: value+1 for key, value in random_counts_dict.items()}
 
-    # does add-1 Laplace smoothing to the categorical distribution containing the union of the quantifiers in
-    # generations and in random_unique_quantifiers
+    # lognormalizes the smoothed dict of random quantifiers and finds the surprisal every quantifier
+    lognormalization_constant_random = np.log2(np.sum(list(random_counts_dict.values())))
+    random_surprisals = {
+        quant: np.log2(value) - lognormalization_constant_random for quant, value in random_counts_dict.items()}
+
+    # # lognormalizes the dict of observed quantifiers and calculates the surprisal in the observed list
+    # lognormalization_constant_observed = np.log2(np.sum(list(observed_counts_dict.values())))
+    # observed_surprisals = {
+    #     quant: np.log2(value) - lognormalization_constant_observed for quant, value in observed_counts_dict.items()}
+
+    # calculates the difference in surprisals
+    # differential_surprisals_observed = {quant: observed_surprisals[quant] - random_surprisals[quant] for quant in observed_surprisals.keys()}
+
+    # calculate the surprisal of observing the observed quantifiers the number of times they were observed
+    # given the distribution from the random quantifiers
+    conditional_surprisal = {quant: -random_surprisals[quant] * observed_counts_dict[quant] for quant in observed_counts_dict.keys()}
+    # pprint(conditional_surprisal)
+    return conditional_surprisal
 
 
 def inter_generational_movement_speed(generations, parents):
@@ -370,7 +423,6 @@ def inter_generational_movement_speed(generations, parents):
     Finds the speed at which languages as changing as the generations go by
     In an ideal case, it should start fast and then get slow as the simulation finds a spot it likes
     in the language space.
-    TODO: add a functionality to iteration.py that records whose parents
     TODO: Test this function
     :param all_models: all models as rows
     :param generations: a 3d array with shape (generations, models, agents)
@@ -419,19 +471,4 @@ def check_quantity(list_models, map_lang):
 
 
 if __name__ == '__main__':
-    # chance_property_distribution(10, measure_monotonicity, [pop.NetworkAgent(10) for _ in range(1000)])
-    """
-    # quantifiers_in_order_of_monotonicity(3)
-
-    models_size_3 = generate_list_models(3)
-    def exactly_2(seq):
-        return np.sum(seq) == 2
-    def first_one(seq):
-        return seq[0] == 1
-    ex2_lang = np.apply_along_axis(
-        exactly_2, axis=1, arr=models_size_3).astype(np.int)
-    f1_lang = np.apply_along_axis(
-        first_one, axis=1, arr=models_size_3).astype(np.int)
-    print(check_quantity(models_size_3, ex2_lang))
-    print(check_quantity(models_size_3, f1_lang))
-    """
+    pass
