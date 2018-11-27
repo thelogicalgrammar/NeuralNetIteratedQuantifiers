@@ -101,34 +101,45 @@ def agent_agent_test():
     plt.show()
 
 
-def random_quant(max_model_size, all_models, qtype="random"):
+def produce_random_quants(max_model_size, all_models, n_quants=1, qtype="random"):
     """
     Produces a random quantifier with a given length and optional type.
-    Possible types: "random", "mon".
+    Possible types: "random", "mon", "network", "uniform"
     # TODO: implement more quantifier types
     """
 
-    if qtype=="random":
-        return np.random.randint(2, size=(len(all_models), 1))
+    if n_quants > 1:
+        return np.column_stack(tuple(produce_random_quants(max_model_size, all_models) for _ in range(n_quants)))
 
-    if qtype=="mon":
-        # create random monotone quantifier
-        bound_position = np.random.randint(max_model_size)
-        direction = np.random.randint(2)
-        sizes = np.sum(all_models, axis=1)
-        return np.where(
-            ((direction == 1) & (sizes >= bound_position)) | ((direction == 0) & (sizes <= bound_position)), 1, 0).reshape(-1, 1)
+    if n_quants == 1:
 
-    elif qtype=="conv":
-        # create random convex (possible monotone) quantifier
-        bounds_position = np.sort(np.random.choice(max_model_size, size=2, replace=False))
-        direction = np.random.randint(2)
-        counts = np.sum(all_models, axis=1)
-        quant = (counts <= bounds_position[0]) | (counts >= bounds_position[1]) == direction
-        return quant.reshape(-1, 1).astype(np.int)
+        if qtype == "random":
+            return np.random.randint(2, size=(len(all_models), 1))
 
-    else:
-        raise ValueError("Value of quantifier type not recognized. Either mon, conv, or random")
+        if qtype == "mon":
+            # create random monotone quantifier
+            bound_position = np.random.randint(max_model_size)
+            direction = np.random.randint(2)
+            sizes = np.sum(all_models, axis=1)
+            return np.where(
+                ((direction == 1) & (sizes >= bound_position)) | ((direction == 0) & (sizes <= bound_position)), 1, 0).reshape(-1, 1)
+
+        elif qtype == "conv":
+            # create random convex (possible monotone) quantifier
+            bounds_position = np.sort(np.random.choice(max_model_size, size=2, replace=False))
+            direction = np.random.randint(2)
+            counts = np.sum(all_models, axis=1)
+            quant = (counts <= bounds_position[0]) | (counts >= bounds_position[1]) == direction
+            return quant.reshape(-1, 1).astype(np.int)
+
+        elif qtype == "network":
+            return pop.NetworkAgent(max_model_size).map(all_models).astype(np.int)
+
+        elif qtype == "uniform":
+            return pop.UniformRandomAgent(max_model_size).map(all_models).astype(np.int)
+
+        else:
+            raise ValueError("Value of quantifier type not recognized. Either mon, conv, or random")
 
 
 def test_monotonicity_preference():
@@ -140,8 +151,8 @@ def test_monotonicity_preference():
     mon_dist = []
     non_mon_dist = []
     for i in range(100):
-        mon_quant = random_quant(max_model_size, all_models, qtype="mon")
-        non_mon_quant = random_quant(max_model_size, all_models)
+        mon_quant = produce_random_quants(max_model_size, all_models, qtype="mon")
+        non_mon_quant = produce_random_quants(max_model_size, all_models)
         mon_dist.append(agent_quantifier_test(max_model_size, mon_quant))
         non_mon_dist.append(agent_quantifier_test(max_model_size, non_mon_quant))
         print(i)
@@ -236,7 +247,7 @@ def test_order_importance():
 
     # check for different quantifiers
     for i in range(1):
-        quantifier = random_quant(max_model_size, all_models)
+        quantifier = produce_random_quants(max_model_size, all_models)
         models, truth_values = shuffle_learning_model(all_models, quantifier, restrict=0.7)
 
         # unshuffled condition
@@ -460,19 +471,5 @@ def check_quantity(list_models, map_lang):
 
 
 if __name__ == '__main__':
-    # chance_property_distribution(10, measure_monotonicity, [pop.NetworkAgent(10) for _ in range(1000)])
-    """
-    # quantifiers_in_order_of_monotonicity(3)
-
-    models_size_3 = generate_list_models(3)
-    def exactly_2(seq):
-        return np.sum(seq) == 2
-    def first_one(seq):
-        return seq[0] == 1
-    ex2_lang = np.apply_along_axis(
-        exactly_2, axis=1, arr=models_size_3).astype(np.int)
-    f1_lang = np.apply_along_axis(
-        first_one, axis=1, arr=models_size_3).astype(np.int)
-    print(check_quantity(models_size_3, ex2_lang))
-    print(check_quantity(models_size_3, f1_lang))
-    """
+    a = produce_random_quants(3, generate_list_models(3), 10, qtype="network")
+    np.save("/random_quantifiers", a)
