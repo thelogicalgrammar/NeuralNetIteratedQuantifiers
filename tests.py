@@ -336,33 +336,70 @@ def chance_property_distribution(l, property, agents):
     plt.show()
 
 
-def find_proportions_of_quantifiers():
-    pass
+def find_proportions_of_quantifiers(quantifiers):
+    """
+    :param quantifiers: A frame of quantifiers with shape (# models, # quantifiers)
+    :return: Two arrays; the first is a version of quantifiers without repetitions, the second is counts
+    """
+    unique_quantifiers, quantifiers_count = np.unique(quantifiers, return_counts=True, axis=1)
+    return unique_quantifiers, quantifiers_count
 
 
-def detect_region_of_motion(random_unique_quantifiers, random_proportions, generations):
+def counts_without_sort_and_unique(quantifiers):
+    """
+    :param quantifiers: Array of quantifiers, with shape (# models, # quantifiers)
+    :return: An array that for each quantifier says the number of repetitions of that quantifier
+    """
+    quantifiers, counts = np.unique(quantifiers)
+    unsorted_counts = np.zeros(shape=(quantifiers.shape[1], 1))
+    for quant_index in range(quantifiers.shape[1]):
+        indices_identical = np.where(quantifiers[:, quant_index] == quantifiers)
+        unsorted_counts[indices_identical] += 1
+
+
+def detect_region_of_motion(random_quantifiers, generations):
     """
     Finds the quantifiers overrepresented in generations given their proportions in a random set of agents
-    all_models, quantifiers, and random_proportions are meant to be produced by find_proportions_of_quantifiers
-    :param: random_unique_quantifiers: unique quantifiers observed in the random sample. Shape (# models, # quantifiers)
-    :param random_proportions: row array containing the proportion of each quantifier in random_unique_quantifiers
+    :param random_quantifiers: array of random quantifiers with shape (# models, # quantifiers)
     :param generations: a 3d array with shape (# generations, # models, # agents)
     :return: two arrays. The first array is the array of quantifiers in generations that are overrepresented given the
     random distribution. The second is a row vector with a measure of the unexpectedness of the quants in the first array.
     """
+    # transforms the generation into quantifiers (i.e. 0/1)
+    observed_generations = np.around(generations).astype(np.int)
+    splitted_generations = [i[0] for i in np.split(observed_generations, np.arange(1, len(observed_generations)))]
+    observed_quantifiers = np.column_stack(splitted_generations)
 
-    # get the distribution over quantifiers in generations
-    quantifiers_in_generations = np.empty(shape=(generations.shape[1], len(generations) * generations.shape[2]))
+    # get the unique quantifiers and the counts of the quantifiers
+    unique_random_quantifiers, counts_random_quantifiers = find_proportions_of_quantifiers(random_quantifiers)
+    unique_observed_quantifiers, counts_observed_quantifiers = find_proportions_of_quantifiers(observed_quantifiers)
 
-    splitted_generations = generations, np.arange(len(generations))
-    print(splitted_generations)
-    # quantifiers_in_generations = np.concatenate(np.split(), axis=)
+    # create dictionaries with string versions of quantifiers as keys and their count as value
+    observed_counts_dict = {str(quant): count for quant, count in zip(
+        unique_observed_quantifiers.T.tolist(), counts_observed_quantifiers.tolist()
+    )}
+    random_counts_dict = {str(quant): count for quant, count in zip(
+        unique_random_quantifiers.T.tolist(), counts_random_quantifiers.tolist()
+    )}
 
-    # observed_unique_quantifiers, counts_observed_quantifiers = np.unique()
-    # observed_proportions_quantifiers =
+    # does add-0.5 Laplace smoothing
+    observed_keys_not_in_random_dict = {key: 0. for key in observed_counts_dict.keys() - random_counts_dict.keys()}
+    random_counts_dict.update(observed_keys_not_in_random_dict)
+    random_counts_dict = {key: value+1 for key, value in random_counts_dict.items()}
 
-    # does add-1 Laplace smoothing to the categorical distribution containing the union of the quantifiers in
-    # generations and in random_unique_quantifiers
+    # lognormalizes the smoothed dict of random quantifiers and finds the surprisal every quantifier
+    lognormalization_constant_random = np.log2(np.sum(list(random_counts_dict.values())))
+    random_surprisals = {
+        quant: np.log2(value) - lognormalization_constant_random for quant, value in random_counts_dict.items()}
+
+    # lognormalizes the dict of observed quantifiers and calculates the surprisal in the observed list
+    lognormalization_constant_observed = np.log2(np.sum(list(observed_counts_dict.values())))
+    observed_surprisals = {
+        quant: np.log2(value) - lognormalization_constant_observed for quant, value in observed_counts_dict.items()}
+
+    # calculates the difference in surprisals
+    differential_surprisals_observed = {quant: observed_surprisals[quant] - random_surprisals[quant] for quant in observed_surprisals.keys()}
+    print(differential_surprisals_observed)
 
 
 def inter_generational_movement_speed(generations, parents):
