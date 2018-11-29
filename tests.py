@@ -314,10 +314,18 @@ def quantity_memoized(models_string, quantifier_string):
 
 def measure_monotonicity(all_models, quantifier, type="extensions"):
     if type == "extensions":
-        return np.max([measure_upward_monotonicity(all_models, quantifier),
-                    measure_upward_monotonicity(1-all_models, 1-quantifier)])
+        return np.max(
+            [measure_upward_monotonicity(all_models, quantifier),
+             measure_upward_monotonicity(all_models, 1 - quantifier),
+             # downward monotonicity
+             measure_upward_monotonicity(1 - all_models, 1 - quantifier),
+             measure_upward_monotonicity(1 - all_models, quantifier)])
     elif type == "step":
         pass
+
+
+def measure_negation_monotonicity(all_models, quantifier):
+    return measure_upward_monotonicity(all_models, 1-quantifier)
 
 
 def quantifiers_in_order_of_monotonicity(l):
