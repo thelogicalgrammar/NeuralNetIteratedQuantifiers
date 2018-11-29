@@ -471,4 +471,5 @@ def check_quantity(list_models, map_lang):
 
 
 if __name__ == '__main__':
-    pass
+    a = produce_random_quants(10, generate_list_models(10), 1000000, qtype="network")
+    np.save("/exports/eddie/scratch/s1569804/random_network_quantifiers", a)

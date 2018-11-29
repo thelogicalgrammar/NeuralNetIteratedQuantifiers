@@ -34,7 +34,7 @@ class Agent:
         Returns 0 or 1, by 'argmaxing' the probabilities, i.e. returning
         whichever one had higher probability.
         """
-        return np.around(self.produce(models_to_consider))
+        return np.around(self.produce(models_to_consider)).astype(int)
 
     def sample(self, models_to_consider):
         """
