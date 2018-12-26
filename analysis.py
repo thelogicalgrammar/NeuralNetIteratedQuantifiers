@@ -89,6 +89,9 @@ def summarize_trial(trial_info, data, parents):
                 models, gen_agt_map)
             gen_row['quantity_' + str(agt)] = tests.check_quantity(
                 models, gen_agt_map)
+            gen_row['ultrafilter_' + str(agt)] = tests.check_quantifier_ultrafilter(
+                models, gen_agt_map
+            )
         frame = frame.append(gen_row, ignore_index=True)
     frame['inter_generational_movement_speed'] = (
         tests.inter_generational_movement_speed(data, parents))

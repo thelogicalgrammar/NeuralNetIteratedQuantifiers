@@ -236,7 +236,8 @@ def train_test_split(arr, split):
 
 def test_order_importance():
     """
-    Is there more variability across the guessed quantifiers if the order is shuffled every time?
+    Is there more variability across the quantifiers guessed from the same underlying
+    true quantifier, if the order of the observations is shuffled across learners?
     In other words, does the order matter for learning?
     Check whether agents learn a quantifier from the same observations more consistently (even if wrongly)
     if those observations are always in the same order rather than shifted order
@@ -329,6 +330,11 @@ def measure_negation_monotonicity(all_models, quantifier):
 
 
 def quantifiers_in_order_of_monotonicity(l):
+    """
+    Prints all quantifiers on models of length l in order of monotonicity.
+    :param l: Max model size
+    :return: None
+    """
     models = generate_list_models(l)
     quantifiers = generate_list_models(len(models)).astype(int)
     mon_values = np.empty(shape=(len(quantifiers), 1))
@@ -336,14 +342,16 @@ def quantifiers_in_order_of_monotonicity(l):
         mon_values[i] = measure_monotonicity(models, quantifiers[i])
     order_indices = np.argsort(mon_values, axis=0)
     with np.printoptions(threshold=np.inf):
-        pprint([(quantifier, mon_value) for quantifier, mon_value in zip(quantifiers[order_indices].tolist(), mon_values[order_indices].tolist())])
+        pprint([(quantifier, mon_value)
+                for quantifier, mon_value
+                in zip(quantifiers[order_indices].tolist(), mon_values[order_indices].tolist())])
 
 
 def chance_property_distribution(l, property, agents):
     """
-    Plots the distribution of a property in a random sample of agents and returns the randomly produced quantifiers
+    Plots the distribution of a property in the given set of agents
     :param l: max model length
-    :param property: which property (as a function)
+    :param property: property as a function that take input (models, quantifiers)
     :param agents: list of agents
     :return: None
     """
@@ -447,7 +455,7 @@ def inter_generational_movement_speed(generations, parents):
 
 
 def check_quantity(list_models, map_lang):
-    # TODO: consider vectorizing across first axis (i.e. generation) of the 3-d results array
+    # TODO: vectorize across first axis (i.e. generation) of the 3-d results array
     """
     Calculates quantity as 1 - H(quantifier is true at the model | model size)
     """
@@ -478,6 +486,24 @@ def check_quantity(list_models, map_lang):
     return quantity
 
 
+def check_quantifier_ultrafilter(all_models, quantifier):
+    """
+    Check whether a given quantifier is an ultrafilter
+    An ultrafilter is a quantifier whose truth value simply depends on one of the objects in the model.
+    :param all_models: An array with shape (# models, # objects)
+    :param quantifier: A column vector with size # models
+    :return: Whether quantifier is an ultrafilter or not
+    """
+    tiled_quant = np.tile(quantifier, reps=(1, all_models.shape[1]))
+    identity = tiled_quant == all_models
+    columns_identical = np.all(identity, axis=0)
+    return np.any(columns_identical)
+
+
 if __name__ == '__main__':
-    a = produce_random_quants(10, generate_list_models(10), 1000000, qtype="network")
-    np.save("/exports/eddie/scratch/s1569804/random_network_quantifiers", a)
+    # a = produce_random_quants(10, generate_list_models(10), 1000000, qtype="network")
+    models = generate_list_models(3)
+    quantifier = produce_random_quants(3, models)
+    print(quantifier)
+    check_quantifier_ultrafilter(models, quantifier)
+    # np.save("/exports/eddie/scratch/s1569804/random_network_quantifiers", a)
