@@ -494,16 +494,15 @@ def check_quantifier_ultrafilter(all_models, quantifier):
     :param quantifier: A column vector with size # models
     :return: Whether quantifier is an ultrafilter or not
     """
-    tiled_quant = np.tile(quantifier, reps=(1, all_models.shape[1]))
+    map_quant = np.around(quantifier).astype(int).reshape((-1,1))
+    tiled_quant = np.tile(map_quant, reps=(1, all_models.shape[1]))
     identity = tiled_quant == all_models
     columns_identical = np.all(identity, axis=0)
     return np.any(columns_identical)
 
 
 if __name__ == '__main__':
-    # a = produce_random_quants(10, generate_list_models(10), 1000000, qtype="network")
+    a = produce_random_quants(10, generate_list_models(10), 1000000, qtype="network")
     models = generate_list_models(3)
     quantifier = produce_random_quants(3, models)
-    print(quantifier)
-    check_quantifier_ultrafilter(models, quantifier)
-    # np.save("/exports/eddie/scratch/s1569804/random_network_quantifiers", a)
+    np.save("/exports/eddie/scratch/s1569804/random_network_quantifiers", a)

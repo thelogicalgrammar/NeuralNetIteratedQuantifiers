@@ -129,7 +129,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--mode', type=str, choices=['convert', 'analyze'],
                         default='convert')
-    parser.add_argument('--file_pattern', type=str, default='*/quantifiers.npy')
+    # parser.add_argument('--file_pattern', type=str, default='*/quantifiers.npy')
+    parser.add_argument('--file_pattern', type=str, default="./quantifiers.npy")
     args = parser.parse_args()
 
     if args.mode == 'convert':
