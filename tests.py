@@ -275,12 +275,13 @@ def test_order_importance():
         plt.show()
 
 
-def measure_upward_monotonicity(all_models, quantifier):
-    """
+def upward_monotonicity_extensions(all_models, quantifier):
+    """ Measures degree of upward monotonocity of a quantifier as: % of extensions of
+    each true model that are also true.
 
-    :param all_models:
-    :param quantifier:
-    :return:
+    :param all_models: list of models
+    :param quantifier: list of truth values, same len as all_models
+    :return: scalar measure
     """
     if np.all(quantifier) or not np.any(quantifier):
         return 1
@@ -293,6 +294,105 @@ def measure_upward_monotonicity(all_models, quantifier):
         #proportion of true extensions of that model for the quantifier
         props.append(np.sum(quantifier[extends])/np.sum(extends))
     return np.mean(props)
+
+
+def binary_to_int(arr):
+    """ Converts a 2-D numpy array of 1s and 0s into integers, assuming each
+    row is a binary number.  By convention, left-most column is 1, then 2, and
+    so on, up until 2^(arr.shape[1]).
+
+    :param arr: 2D numpy array
+    :returns: 1D numpy array, length arr.shape[0], containing integers
+    """
+    return arr.dot(1 << np.arange(arr.shape[-1]))
+
+
+def upward_monotonicity_entropy(all_models, quantifier):
+    """Measures degree of upward monotonicity of a quantifiers as
+    1 - H(Q | true_pred) / H(Q) where H is (conditional) entropy, and true_pred is the
+    variable over models saying whether there's a true _predecessor_ in the
+    subset order.
+
+    :param all_models: list of models
+    :param quantifier: list of truth values, same len as models
+    :returns scalar
+    """
+
+    if np.all(quantifier) or not np.any(quantifier):
+        return 1
+    # uniform distributions
+    p_q_true = sum(quantifier) / len(quantifier)
+    p_q_false = 1 - p_q_true
+    q_ent = -p_q_true*np.log2(p_q_true) - p_q_false*np.log2(p_q_false)
+
+    # get integers corresponding to each model
+    model_ints = binary_to_int(all_models)
+
+    def get_preds(num_arr, num):
+        """Given an array of ints, and an int, get all predecessors of the
+        model corresponding to int.
+        Returns an array of same shape as num_arr, but with bools
+        """
+        return num_arr & num == num_arr
+
+    def num_preds(num_arr, num):
+        preds = get_preds(num_arr, num).astype(int)
+        return sum(preds)
+
+    def has_true_pred(num_arr, quantifier, num):
+        preds = get_preds(num_arr, num)
+        return np.any(quantifier * preds)
+
+    # vector of length quantifier, has a 1 if that model has a true
+    # predecessor, 0 otherwise
+    true_preds = np.vectorize(
+        lambda num: has_true_pred(model_ints, quantifier, num)
+    )(model_ints).astype(int)
+
+    # TODO: how to handle cases where true_preds is all 0s or all 1s, i.e.
+    # where every model does have a true predecessor?
+    """
+    if np.all(true_preds) or not np.any(true_preds):
+        # to avoid divide by zeros / conditioning on zero-prob
+        # TODO: does this make sense???
+        return q_ent
+    """
+
+    pred_weights =  np.vectorize(
+        lambda num: num_preds(model_ints, num)
+    )(model_ints)
+
+
+    print('q:')
+    print(quantifier)
+    print(true_preds)
+    pred_prob = pred_weights / sum(pred_weights)
+    # print(pred_weights)
+    # print(pred_prob)
+    p_pred = sum(true_preds) / len(true_preds)
+    p_nopred = 1 - p_pred
+
+    # TODO: make this elegant! solve nan problems
+    # TODO: should these be weighted by pred_weights, i.e. pred_prob?
+    q_pred = sum(quantifier * true_preds) / len(quantifier)
+    q_nopred = sum(quantifier * (1 - true_preds)) / len(quantifier)
+    noq_pred = sum((1 - quantifier) * true_preds) / len(quantifier)
+    noq_nopred = sum((1 - quantifier) * (1 - true_preds)) / len(quantifier)
+
+    pred_logs = np.log2([noq_pred, q_pred] / p_pred)
+    pred_logs[pred_logs == -np.inf] = 0
+    nopred_logs = np.log2([noq_nopred, q_nopred] / p_nopred)
+    nopred_logs[nopred_logs == -np.inf] = 0
+    print(pred_logs)
+    print(nopred_logs)
+    ent_pred = -np.nansum(np.array([noq_pred, q_pred]) * pred_logs)
+    ent_nopred = -np.nansum(np.array([noq_nopred, q_nopred]) * nopred_logs)
+    cond_ent = ent_pred + ent_nopred
+    print(cond_ent)
+    print(q_ent)
+
+    return 0 if q_ent == 0 else 1 - (cond_ent / q_ent)
+    # return 1 - cond_ent / q_ent
 
 
 @lru_cache(maxsize=None)
@@ -313,23 +413,32 @@ def quantity_memoized(models_string, quantifier_string):
     return check_quantity(models, quantifier)
 
 
-def measure_monotonicity(all_models, quantifier, type="extensions"):
-    if type == "extensions":
-        return np.max(
-            [measure_upward_monotonicity(all_models, quantifier),
-             measure_upward_monotonicity(all_models, 1 - quantifier),
-             # downward monotonicity
-             measure_upward_monotonicity(1 - all_models, 1 - quantifier),
-             measure_upward_monotonicity(1 - all_models, quantifier)])
-    elif type == "step":
-        pass
+def measure_monotonicity(all_models, quantifier,
+                         measure=upward_monotonicity_extensions):
+    """ Measures degree of monotonicty, as max of the degree of
+    positive/negative monotonicty, for a given quantifier _and its negation_
+    (since truth values are symmetric for us).
+
+    :param all_models: list of models
+    :param quantifier: list of truth values
+    :param measure: method for computing degree of upward monotonicity of a Q
+    :return: max of measure applied to all_models and quantifier, plus 1- each
+    of those
+    """
+    return np.max(
+        [measure(all_models, quantifier),
+         measure(all_models, 1 - quantifier),
+         # downward monotonicity
+         measure(1 - all_models, 1 - quantifier),
+         measure(1 - all_models, quantifier)])
 
 
 def measure_negation_monotonicity(all_models, quantifier):
     return measure_upward_monotonicity(all_models, 1-quantifier)
 
 
-def quantifiers_in_order_of_monotonicity(l):
+def quantifiers_in_order_of_monotonicity(l,
+                                         measure=upward_monotonicity_extensions):
     """
     Prints all quantifiers on models of length l in order of monotonicity.
     :param l: Max model size
@@ -339,7 +448,7 @@ def quantifiers_in_order_of_monotonicity(l):
     quantifiers = generate_list_models(len(models)).astype(int)
     mon_values = np.empty(shape=(len(quantifiers), 1))
     for i in range(len(quantifiers)):
-        mon_values[i] = measure_monotonicity(models, quantifiers[i])
+        mon_values[i] = measure_monotonicity(models, quantifiers[i], measure)
     order_indices = np.argsort(mon_values, axis=0)
     with np.printoptions(threshold=np.inf):
         pprint([(quantifier, mon_value)
@@ -502,7 +611,10 @@ def check_quantifier_ultrafilter(all_models, quantifier):
 
 
 if __name__ == '__main__':
+    """
     a = produce_random_quants(10, generate_list_models(10), 1000000, qtype="network")
     models = generate_list_models(3)
     quantifier = produce_random_quants(3, models)
     np.save("/exports/eddie/scratch/s1569804/random_network_quantifiers", a)
+    """
+    quantifiers_in_order_of_monotonicity(3, measure=upward_monotonicity_entropy)
