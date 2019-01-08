@@ -318,6 +318,8 @@ def upward_monotonicity_entropy(all_models, quantifier):
     :returns scalar
     """
 
+    quantifier = quantifier.flatten()
+
     if np.all(quantifier) or not np.any(quantifier):
         return 1
     # uniform distributions

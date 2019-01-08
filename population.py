@@ -17,7 +17,7 @@ class MLP(nn.Module):
 
     def forward(self, x):
         # TODO: shift to -1, 1 or not?
-        # x = 2*x - 1
+        x = 2*x - 1
         x = torch.Tensor(x)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
