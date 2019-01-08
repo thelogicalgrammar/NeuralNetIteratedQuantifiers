@@ -350,7 +350,8 @@ def upward_monotonicity_entropy(all_models, quantifier):
     )(model_ints).astype(int)
 
     # TODO: how to handle cases where true_preds is all 0s or all 1s, i.e.
-    # where every model does have a true predecessor?
+    # where every model does have a true predecessor?  In that case, we have
+    # H(Q | pred) = H(Q), so currently would get degree 0
     """
     if np.all(true_preds) or not np.any(true_preds):
         # to avoid divide by zeros / conditioning on zero-prob
@@ -369,11 +370,11 @@ def upward_monotonicity_entropy(all_models, quantifier):
     pred_prob = pred_weights / sum(pred_weights)
     # print(pred_weights)
     # print(pred_prob)
+    # TODO: should these be weighted by pred_weights, i.e. pred_prob?
     p_pred = sum(true_preds) / len(true_preds)
     p_nopred = 1 - p_pred
 
     # TODO: make this elegant! solve nan problems
-    # TODO: should these be weighted by pred_weights, i.e. pred_prob?
     q_pred = sum(quantifier * true_preds) / len(quantifier)
     q_nopred = sum(quantifier * (1 - true_preds)) / len(quantifier)
     noq_pred = sum((1 - quantifier) * true_preds) / len(quantifier)
@@ -383,16 +384,14 @@ def upward_monotonicity_entropy(all_models, quantifier):
     pred_logs[pred_logs == -np.inf] = 0
     nopred_logs = np.log2([noq_nopred, q_nopred] / p_nopred)
     nopred_logs[nopred_logs == -np.inf] = 0
-    print(pred_logs)
-    print(nopred_logs)
     ent_pred = -np.nansum(np.array([noq_pred, q_pred]) * pred_logs)
     ent_nopred = -np.nansum(np.array([noq_nopred, q_nopred]) * nopred_logs)
     cond_ent = ent_pred + ent_nopred
     print(cond_ent)
     print(q_ent)
 
-    return 0 if q_ent == 0 else 1 - (cond_ent / q_ent)
-    # return 1 - cond_ent / q_ent
+    # return 0 if q_ent == 0 else 1 - (cond_ent / q_ent)
+    return 1 - cond_ent / q_ent
 
 
 @lru_cache(maxsize=None)
