@@ -17,7 +17,7 @@ class MLP(nn.Module):
 
     def forward(self, x):
         # TODO: shift to -1, 1 or not?
-        # x = 2*x - 1
+        x = 2*x - 1
         x = torch.Tensor(x)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
@@ -127,7 +127,7 @@ class Population:
         # list of agent objects
         self.agents = [NetworkAgent(max_model_size) for _ in range(size)]
 
-    def learn_from_population(self, parent_pop, bottleneck_size, num_epochs=1):
+    def learn_from_population(self, parent_pop, bottleneck_size, num_epochs=1, shuffle_input=False):
         """
         Each child in self.agents is selected in turn. A random parent from old pop is selected with replacement.
         models is created as a random array of booleans (there can be repeated rows, I don't know if this is fine)
@@ -138,8 +138,12 @@ class Population:
             parent_idx = rnd.randrange(len(parent_pop.agents))
             parents.append(parent_idx)
             parent = parent_pop.agents[parent_idx]
+            # pick the models that the learner will observe (with substitution)
             models = np.random.randint(0, 2, size=(bottleneck_size, self.max_model_size))
             # make the parent produce the data for the sampled models
             parent_bools = parent.map(models)
+            # shuffle each input model
+            if shuffle_input:
+                np.random.shuffle(models.T)
             child.learn(models, parent_bools, num_epochs=num_epochs)
         return parents

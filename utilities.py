@@ -40,6 +40,15 @@ def generate_random_model(list_models):
     return rnd.choice(list_models)
 
 
+def str2bool(v):
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise TypeError('Boolean value expected.')
+
+
 if __name__ == "__main__":
     import population as pop
     max_model_size = 3

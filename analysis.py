@@ -14,6 +14,30 @@ def gather_columns(data, prefix):
         columns=[prefix])
 
 
+def check_all_monotonicity_ultrafilter(fn_pattern):
+    """
+    Checks that all evolved quantifiers that are perfectly monotone are ultrafilters
+    :param fn_pattern: A pattern that matches the .csv analysis files
+    :return: True iff all monotone quantifiers are ultrafilters, otherwise a df that gives info about the exceptions
+    """
+    info_df = pd.DataFrame(columns=['f_name', 'generation', 'agent'])
+    for f_name in glob.glob(fn_pattern):
+        analysis = pd.read_csv(f_name)
+        # relies on the fact that the columns for monotonicity and ultrafilter check are in the same order
+        monotonicity = analysis.filter(like="quantity_") == 1.
+        ultrafilter = analysis.filter(like="ultrafilter_") > -1
+        # check that the perfectly monotone quantifiers are the ultrafilters
+        identical_matrix = monotonicity.values == ultrafilter.values
+        # find the indices where the monotone quantifiers are not ultrafilters (i.e. where two matrices are different)
+        indices = np.array(np.argwhere(np.logical_not(identical_matrix)))
+        data = pd.DataFrame(
+            np.column_stack(([[f_name]]*len(indices), indices)),
+            columns=["f_name", "generation", "agent"]
+        )
+        info_df = info_df.append(data)
+    return info_df
+
+
 def analyze_trials(file_pattern, first_n=10, last_n=50):
     # TODO: get trial_info from dir names here as well?
     data = pd.DataFrame()
@@ -92,6 +116,7 @@ def summarize_trial(trial_info, data, parents):
             gen_row['ultrafilter_' + str(agt)] = tests.check_quantifier_ultrafilter(
                 models, gen_agt_map
             )
+            gen_row['degenerate_' + str(agt)] = np.all(gen_agt_map) or not np.any(gen_agt_map)
         frame = frame.append(gen_row, ignore_index=True)
     frame['inter_generational_movement_speed'] = (
         tests.inter_generational_movement_speed(data, parents))
@@ -130,7 +155,9 @@ if __name__ == '__main__':
     parser.add_argument('--mode', type=str, choices=['convert', 'analyze'],
                         default='convert')
     # parser.add_argument('--file_pattern', type=str, default='*/quantifiers.npy')
-    parser.add_argument('--file_pattern', type=str, default="./quantifiers.npy")
+    parser.add_argument('--file_pattern', type=str,
+        default=("C:/Users/pplsuser/Desktop/bottleneck-1024+max_model_size-10+"
+                 "n_agents-10+n_generations-1000+num_epochs-8+num_trial-1/quantifiers.npy"))
     args = parser.parse_args()
 
     if args.mode == 'convert':
@@ -138,3 +165,10 @@ if __name__ == '__main__':
     elif args.mode == 'analyze':
         # TODO: args to analyze_trials?
         analyze_trials(args.file_pattern)
+    # filen_pattern =
+    # file = np.load(filen_pattern)
+    # models = utilities.generate_list_models(10)
+    # quant = np.around(file[182, :, 3])
+    # with np.printoptions(threshold=np.inf):
+    #     print(quant)
+    #     print(np.column_stack((models, quant)))

@@ -386,6 +386,7 @@ def counts_without_sort_and_unique(quantifiers):
 
 def detect_region_of_motion(random_quantifiers, generations):
     """
+    TODO: finish this function
     Finds the quantifiers overrepresented in generations given their proportions in a random set of agents
     :param random_quantifiers: array of random quantifiers with shape (# models, # quantifiers)
     :param generations: a 3d array with shape (# generations, # models, # agents)
@@ -498,11 +499,25 @@ def check_quantifier_ultrafilter(all_models, quantifier):
     tiled_quant = np.tile(map_quant, reps=(1, all_models.shape[1]))
     identity = tiled_quant == all_models
     columns_identical = np.all(identity, axis=0)
-    return np.any(columns_identical)
+    # relies on the fact that an ultrafilter can only depend on a single object, not more than one
+    # and therefore the output of nonzero will be unique if there is one at all
+    return np.nonzero(columns_identical)[0][0] if np.any(columns_identical) else -1
 
 
 if __name__ == '__main__':
-    a = produce_random_quants(10, generate_list_models(10), 1000000, qtype="network")
+    # a = produce_random_quants(10, generate_list_models(10), 1000000, qtype="network")
     models = generate_list_models(3)
-    quantifier = produce_random_quants(3, models)
-    np.save("/exports/eddie/scratch/s1569804/random_network_quantifiers", a)
+    # quantifier = produce_random_quants(3, models)
+    quantifier = [
+         [0],
+         [0],
+         [1],
+         [0],
+         [1],
+         [0],
+         [0],
+         [1]]
+    print(quantifier)
+    print(models)
+    print(check_quantifier_ultrafilter(models, quantifier))
+    # np.save("/exports/eddie/scratch/s1569804/random_network_quantifiers", a)

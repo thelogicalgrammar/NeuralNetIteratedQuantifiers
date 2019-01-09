@@ -6,7 +6,7 @@ import numpy as np
 
 
 def iterate(n_generations, n_agents, bottleneck, max_model_size,
-            save_path=False, num_trial=None, num_epochs=1):
+            save_path=False, num_trial=None, num_epochs=1, shuffle_input=False):
     # generate all the binary strings of the given length
     # possible_models is a 2d array, where each row is a model
     possible_models = util.generate_list_models(max_model_size)
@@ -23,7 +23,8 @@ def iterate(n_generations, n_agents, bottleneck, max_model_size,
         # the new generation learns from the old one
         parents = child_generation.learn_from_population(parent_generation,
                                                          bottleneck,
-                                                         num_epochs)
+                                                         num_epochs,
+                                                         shuffle_input)
         parent_list[n+1] = parents
         # stores some data to be analyzed later!
         data[n] = util.create_languages_array(parent_generation.agents, possible_models)
@@ -54,6 +55,7 @@ if __name__ == "__main__":
     parser.add_argument("--n_agents", type=int, default=1)
     parser.add_argument("--max_model_size", type=int, default=3)
     parser.add_argument("--num_epochs", type=int, default=3)
+    parser.add_argument("--shuffle_input", type=util.str2bool, default=False)
 
     model_values = parser.parse_args()
     model_values.save_path += "+".join("{}-{}".format(key, value)
