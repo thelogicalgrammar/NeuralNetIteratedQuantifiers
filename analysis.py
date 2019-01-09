@@ -154,10 +154,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--mode', type=str, choices=['convert', 'analyze'],
                         default='convert')
-    # parser.add_argument('--file_pattern', type=str, default='*/quantifiers.npy')
-    parser.add_argument('--file_pattern', type=str,
-        default=("C:/Users/pplsuser/Desktop/bottleneck-1024+max_model_size-10+"
-                 "n_agents-10+n_generations-1000+num_epochs-8+num_trial-1/quantifiers.npy"))
+    parser.add_argument('--file_pattern', type=str, default='*/quantifiers.npy')
     args = parser.parse_args()
 
     if args.mode == 'convert':
@@ -165,10 +162,4 @@ if __name__ == '__main__':
     elif args.mode == 'analyze':
         # TODO: args to analyze_trials?
         analyze_trials(args.file_pattern)
-    # filen_pattern =
-    # file = np.load(filen_pattern)
-    # models = utilities.generate_list_models(10)
-    # quant = np.around(file[182, :, 3])
-    # with np.printoptions(threshold=np.inf):
-    #     print(quant)
-    #     print(np.column_stack((models, quant)))
+
