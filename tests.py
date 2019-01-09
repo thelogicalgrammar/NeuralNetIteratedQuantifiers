@@ -607,8 +607,11 @@ def check_quantifier_ultrafilter(all_models, quantifier):
     """
     map_quant = np.around(quantifier).astype(int).reshape((-1,1))
     tiled_quant = np.tile(map_quant, reps=(1, all_models.shape[1]))
-    identity = tiled_quant == all_models
-    columns_identical = np.all(identity, axis=0)
+    identity_positive = tiled_quant == all_models
+    identity_negative = tiled_quant == np.logical_not(all_models)
+    columns_identical_positive = np.all(identity_positive, axis=0)
+    columns_identical_negative = np.all(identity_negative, axis=0)
+    columns_identical = columns_identical_positive | columns_identical_negative
     # relies on the fact that an ultrafilter can only depend on a single object, not more than one
     # and therefore the output of nonzero will be unique if there is one at all
     return np.nonzero(columns_identical)[0][0] if np.any(columns_identical) else -1
