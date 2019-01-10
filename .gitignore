@@ -1,7 +1,12 @@
 .idea/
 
+
 __pycache__/
+
 multiple_simulations.sh
+
 run_script.sh
+
 EDDIE_server/
+
 other_tests/

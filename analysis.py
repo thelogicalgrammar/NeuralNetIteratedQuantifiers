@@ -5,6 +5,16 @@ import glob
 from plotnine import *
 import tests
 import utilities
+from os import path
+
+
+def trial_info_from_fname(fname):
+    # I rewrote so that it works in windows. Do change it if there are problems!
+    # directory rather than filename contains the trial parameters
+    trial_root = path.split(path.split(path.normpath(fname))[0])[1]
+    kvs = trial_root.split('+')
+    trial_info = dict([kv.split('-') for kv in kvs])
+    return trial_info
 
 
 def gather_columns(data, prefix):
@@ -14,28 +24,49 @@ def gather_columns(data, prefix):
         columns=[prefix])
 
 
-def check_all_monotonicity_ultrafilter(fn_pattern):
+def summarize_summaries(fn_pattern):
+    """
+    This function goes through the .csv files containing the results of each trial
+    and prints various general info about all the dataframes
+    :param fn_pattern: Get a pattern for the .csv files containing the summary of the trials
+    :return: None
+    """
+    _data_list = []
+    for f_name in glob.glob(fn_pattern):
+        trial_info = trial_info_from_fname(f_name)
+        parameters, values = zip(*trial_info.items())
+        df = pd.read_csv(f_name)
+        df[[*parameters]] = pd.DataFrame([[*values]], index=df.index)
+        df["path_name"] = f_name
+        _data_list.append(df)
+    data = pd.concat(_data_list)
+    monotone_non_ultrafilters_indices = check_all_monotonicity_ultrafilter(data)
+    print("Indices where fully monotone quantifiers are not ultrafilters:")
+    print(monotone_non_ultrafilters_indices)
+    # # for printing full generation
+    # with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+    #     print(data.iloc[list(zip(monotone_non_ultrafilters_indices))[0]])
+    print("Proportions of ultrafilters based on each object")
+    objects, counts = np.unique(data.filter(like="ultrafilter_").values, return_counts=True)
+    proportions = counts / np.sum(counts)
+    print(pd.Series(proportions, index=objects))
+    # TODO: add to this function
+
+
+def check_all_monotonicity_ultrafilter(analysis):
     """
     Checks that all evolved quantifiers that are perfectly monotone are ultrafilters
-    :param fn_pattern: A pattern that matches the .csv analysis files
-    :return: True iff all monotone quantifiers are ultrafilters, otherwise a df that gives info about the exceptions
+    :param analysis: a dataframe with the analysis
+    :return: Indices with inconsistencies (possibly empty)
     """
-    info_df = pd.DataFrame(columns=['f_name', 'generation', 'agent'])
-    for f_name in glob.glob(fn_pattern):
-        analysis = pd.read_csv(f_name)
-        # relies on the fact that the columns for monotonicity and ultrafilter check are in the same order
-        monotonicity = analysis.filter(like="quantity_") == 1.
-        ultrafilter = analysis.filter(like="ultrafilter_") > -1
-        # check that the perfectly monotone quantifiers are the ultrafilters
-        identical_matrix = monotonicity.values == ultrafilter.values
-        # find the indices where the monotone quantifiers are not ultrafilters (i.e. where two matrices are different)
-        indices = np.array(np.argwhere(np.logical_not(identical_matrix)))
-        data = pd.DataFrame(
-            np.column_stack(([[f_name]]*len(indices), indices)),
-            columns=["f_name", "generation", "agent"]
-        )
-        info_df = info_df.append(data)
-    return info_df
+    # relies on the fact that the columns for monotonicity and ultrafilter check are in the same order
+    monotonicity = analysis.filter(like="monotonicity_") == 1.
+    ultrafilter = analysis.filter(like="ultrafilter_") > -1
+    # check that the perfectly monotone quantifiers are the ultrafilters
+    identical_matrix = monotonicity.values == ultrafilter.values
+    # find the indices where the monotone quantifiers are not ultrafilters (i.e. where two matrices are different)
+    indices = np.array(np.argwhere(np.logical_not(identical_matrix)))
+    return indices
 
 
 def analyze_trials(file_pattern, first_n=10, last_n=50):
@@ -141,9 +172,7 @@ def batch_convert_to_csv(fn_pattern):
         # in particular, the files are named path/to/trial_info_dir/quantifiers.ext and
         # path/to/trial_info_dir/parents.ext
         parents = np.load(fname.replace('quantifiers', 'parents')).astype(int)
-        trial_root = fname.split('/')[-2]  # -1 is filename, -2 is directory we want
-        kvs = trial_root.split('+')
-        trial_info = dict([kv.split('-') for kv in kvs])
+        trial_info = trial_info_from_fname(fname)
         table = summarize_trial(trial_info, data, parents)
         old_ext_len = len(fname.split('.')[-1])
         table.to_csv(fname[:-(old_ext_len+1)] + '.csv')
