@@ -5,6 +5,7 @@ import population as pop
 from pprint import pprint
 import matplotlib.pyplot as plt
 import seaborn
+import itertools as it
 import random as rnd
 
 
@@ -107,15 +108,12 @@ def produce_random_quants(max_model_size, all_models, n_quants=1, qtype="random"
     Possible types: "random", "mon", "network", "uniform"
     # TODO: implement more quantifier types
     """
-
     if n_quants > 1:
         return np.column_stack(tuple(produce_random_quants(max_model_size, all_models) for _ in range(n_quants)))
 
     if n_quants == 1:
-
         if qtype == "random":
             return np.random.randint(2, size=(len(all_models), 1))
-
         if qtype == "mon":
             # create random monotone quantifier
             bound_position = np.random.randint(max_model_size)
@@ -123,7 +121,6 @@ def produce_random_quants(max_model_size, all_models, n_quants=1, qtype="random"
             sizes = np.sum(all_models, axis=1)
             return np.where(
                 ((direction == 1) & (sizes >= bound_position)) | ((direction == 0) & (sizes <= bound_position)), 1, 0).reshape(-1, 1)
-
         elif qtype == "conv":
             # create random convex (possible monotone) quantifier
             bounds_position = np.sort(np.random.choice(max_model_size, size=2, replace=False))
@@ -131,15 +128,13 @@ def produce_random_quants(max_model_size, all_models, n_quants=1, qtype="random"
             counts = np.sum(all_models, axis=1)
             quant = (counts <= bounds_position[0]) | (counts >= bounds_position[1]) == direction
             return quant.reshape(-1, 1).astype(np.int)
-
         elif qtype == "network":
             return pop.NetworkAgent(max_model_size).map(all_models).astype(np.int)
-
         elif qtype == "uniform":
             return pop.UniformRandomAgent(max_model_size).map(all_models).astype(np.int)
-
         else:
-            raise ValueError("Value of quantifier type not recognized. Either mon, conv, or random")
+            raise ValueError(("Value of quantifier type not recognized. "
+                              "Acceptable types: random, mon, conv, network or uniform"))
 
 
 def test_monotonicity_preference():
@@ -276,9 +271,8 @@ def test_order_importance():
 
 
 def upward_monotonicity_extensions(all_models, quantifier):
-    """ Measures degree of upward monotonocity of a quantifier as: % of extensions of
-    each true model that are also true.
-
+    """
+    Measures degree of upward monotonocity of a quantifier as % of extensions of each true model that are also true.
     :param all_models: list of models
     :param quantifier: list of truth values, same len as all_models
     :return: scalar measure
@@ -432,10 +426,6 @@ def measure_monotonicity(all_models, quantifier,
          # downward monotonicity
          measure(1 - all_models, 1 - quantifier),
          measure(1 - all_models, quantifier)])
-
-
-def measure_negation_monotonicity(all_models, quantifier):
-    return measure_upward_monotonicity(all_models, 1-quantifier)
 
 
 def quantifiers_in_order_of_monotonicity(l,
@@ -607,15 +597,31 @@ def check_quantifier_ultrafilter(all_models, quantifier):
     """
     map_quant = np.around(quantifier).astype(int).reshape((-1,1))
     tiled_quant = np.tile(map_quant, reps=(1, all_models.shape[1]))
-    identity_positive = tiled_quant == all_models
-    identity_negative = tiled_quant == np.logical_not(all_models)
-    columns_identical_positive = np.all(identity_positive, axis=0)
-    columns_identical_negative = np.all(identity_negative, axis=0)
+    columns_identical_positive = np.all(tiled_quant == all_models, axis=0)
+    columns_identical_negative = np.all(tiled_quant == np.logical_not(all_models), axis=0)
     columns_identical = columns_identical_positive | columns_identical_negative
     # relies on the fact that an ultrafilter can only depend on a single object, not more than one
     # and therefore the output of nonzero will be unique if there is one at all
     return np.nonzero(columns_identical)[0][0] if np.any(columns_identical) else -1
 
+
+def check_quantifier_dependence(models, quantifier):
+    """
+    Checks whether the truth of the quantifier depends on a subset of all objects
+    An ultrafilter is a quantifier that only depends on one object
+    A quantifier that doesn't depend on only specific set of objects will depend on all the objects
+    :param models: all models
+    :param quantifier: the quantifier
+    :return: the objects on which the quantifier depends
+    """
+    model_size = models.shape[1]
+    for n_objects in range(1, model_size):
+        objects_combinations = it.combinations(range(model_size), n_objects)
+        truth_table_size = 2 ** n_objects
+        for objects in objects_combinations:
+            possible_truth_table = np.unique(np.column_stack((models[:, objects], quantifier)), axis=0)
+            if len(possible_truth_table) == truth_table_size:
+                return objects
 
 if __name__ == '__main__':
     """

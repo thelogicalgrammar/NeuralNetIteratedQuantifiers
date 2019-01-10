@@ -31,6 +31,9 @@ def summarize_summaries(fn_pattern):
     :param fn_pattern: Get a pattern for the .csv files containing the summary of the trials
     :return: None
     """
+    # allows to print full paths
+    pd.options.display.max_colwidth = 1000
+
     _data_list = []
     for f_name in glob.glob(fn_pattern):
         trial_info = trial_info_from_fname(f_name)
@@ -41,8 +44,10 @@ def summarize_summaries(fn_pattern):
         _data_list.append(df)
     data = pd.concat(_data_list)
     monotone_non_ultrafilters_indices = check_all_monotonicity_ultrafilter(data)
-    print("Indices where fully monotone quantifiers are not ultrafilters:")
-    print(monotone_non_ultrafilters_indices)
+    print("Information about fully monotone quantifiers that are not ultrafilters:")
+    for row in monotone_non_ultrafilters_indices:
+        print(data.iloc[row[0]].filter(regex=str(row[1])+"|path_name|generation"))
+        print()
     # # for printing full generation
     # with pd.option_context('display.max_rows', None, 'display.max_columns', None):
     #     print(data.iloc[list(zip(monotone_non_ultrafilters_indices))[0]])
@@ -50,6 +55,14 @@ def summarize_summaries(fn_pattern):
     objects, counts = np.unique(data.filter(like="ultrafilter_").values, return_counts=True)
     proportions = counts / np.sum(counts)
     print(pd.Series(proportions, index=objects))
+    print("Parameters that developed any perfectly monotone quantifiers")
+    print("(Generation is first generation where monotonicity appears)")
+    indices = np.any(data.filter(like="monotonicity_").values == 1., axis=1)
+    print(data.loc[indices, ["generation", "path_name"]].drop_duplicates(subset="path_name"))
+    print("Parameters that developed any degenerate quantifier")
+    print("(Generation is first generation where degeneracy appears)")
+    indices = np.any(data.filter(like="degenerate_").values == 1., axis=1)
+    print(data.loc[indices, ["generation", "path_name"]].drop_duplicates(subset="path_name"))
     # TODO: add to this function
 
 
@@ -181,7 +194,7 @@ def batch_convert_to_csv(fn_pattern):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--mode', type=str, choices=['convert', 'analyze'],
+    parser.add_argument('--mode', type=str, choices=['convert', 'analyze', 'summarize'],
                         default='convert')
     parser.add_argument('--file_pattern', type=str, default='*/quantifiers.npy')
     args = parser.parse_args()
@@ -191,4 +204,6 @@ if __name__ == '__main__':
     elif args.mode == 'analyze':
         # TODO: args to analyze_trials?
         analyze_trials(args.file_pattern)
+    elif args.mode == 'summarize':
+        summarize_summaries(args.file_pattern)
 
