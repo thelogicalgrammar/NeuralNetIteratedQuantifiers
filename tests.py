@@ -623,6 +623,29 @@ def check_quantifier_dependence(models, quantifier):
             if len(possible_truth_table) == truth_table_size:
                 return objects
 
+
+def almost_ultrafilter(models, quant):
+    """
+    Checks what the closest ultrafilter is
+    :param models:
+    :param quant:
+    :return: a tuple. The first object is an int saying what the closest ultrafilter is.
+    The second is a list of the indices where quant is different from the closest ultrafilter.
+    If there is more than one equally distant ultrafilter, returns -1
+    """
+    all_models = np.column_stack((models, np.logical_not(models)))
+    map_quant = np.around(quant).astype(int).reshape((-1,1))
+    tiled_quant = np.tile(map_quant, reps=(1, all_models.shape[1]))
+    not_identical = np.logical_not(all_models == tiled_quant)
+    counts_different = np.sum(not_identical, axis=0)
+    closest_index = np.argmin(counts_different)
+    if np.sum(counts_different == closest_index) > 1:
+        return -1
+    differences_indices = np.argwhere(not_identical[:, closest_index])
+    closest_absolute_index = closest_index % models.shape[1]
+    return closest_absolute_index, differences_indices.flatten()
+
+
 if __name__ == '__main__':
     """
     a = produce_random_quants(10, generate_list_models(10), 1000000, qtype="network")
