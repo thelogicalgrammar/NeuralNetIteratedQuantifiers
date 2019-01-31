@@ -24,6 +24,19 @@ def gather_columns(data, prefix):
         columns=[prefix])
 
 
+def get_summaries(fn_pattern):
+    _data_list = []
+    for f_name in glob.glob(fn_pattern):
+        trial_info = trial_info_from_fname(f_name)
+        parameters, values = zip(*trial_info.items())
+        df = pd.read_csv(f_name)
+        df[[*parameters]] = pd.DataFrame([[*values]], index=df.index)
+        df["path_name"] = f_name
+        _data_list.append(df)
+    data = pd.concat(_data_list)
+    return data
+
+
 def summarize_summaries(fn_pattern):
     """
     This function goes through the .csv files containing the results of each trial
@@ -34,35 +47,60 @@ def summarize_summaries(fn_pattern):
     # allows to print full paths
     pd.options.display.max_colwidth = 1000
 
-    _data_list = []
-    for f_name in glob.glob(fn_pattern):
-        trial_info = trial_info_from_fname(f_name)
-        parameters, values = zip(*trial_info.items())
-        df = pd.read_csv(f_name)
-        df[[*parameters]] = pd.DataFrame([[*values]], index=df.index)
-        df["path_name"] = f_name
-        _data_list.append(df)
-    data = pd.concat(_data_list)
+    data = get_summaries(fn_pattern)
+
     monotone_non_ultrafilters_indices = check_all_monotonicity_ultrafilter(data)
-    print("Information about fully monotone quantifiers that are not ultrafilters:")
+
+    n_mon = np.sum(data.filter(like="monotonicity_") == 1.).sum()
+    print("\nNumber of monotone: \n", n_mon)
+    print("Number of monotone non-ultrafilters: \n", len(monotone_non_ultrafilters_indices))
+    print("Proportion of non-ultrafilter out of monotone: \n", len(monotone_non_ultrafilters_indices) / n_mon)
+
+    full_output = True
+
+    # this information takes too much space if there are a lot of non-ultrafilter monotone quantifiers
+    if full_output:
+        print("Information about fully monotone quantifiers that are not ultrafilters:")
+        print("Mon non ultrafitlters indices\n", monotone_non_ultrafilters_indices)
+        # # for printing full generation
+        # with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+        #     print(data.iloc[list(zip(monotone_non_ultrafilters_indices))[0]])
+
+    # get the actual non-degenerate non-ultrafilter but monotone quantifiers
     for row in monotone_non_ultrafilters_indices:
-        print(data.iloc[row[0]].filter(regex=str(row[1])+"|path_name|generation"))
-        print()
-    # # for printing full generation
-    # with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-    #     print(data.iloc[list(zip(monotone_non_ultrafilters_indices))[0]])
-    print("Proportions of ultrafilters based on each object")
+        # the regex matches any column name containing the agent index, as well as path_name and generation
+        agent_data = data.iloc[row[0]].filter(regex=str(row[1])+"|path_name|generation")
+        agent_data["index"] = row[1]
+        # print what is needed to get the quantifier
+        print("np.around(np.load(\"{}\")[{}, :, {}])".format(
+            agent_data["path_name"], int(agent_data["generation"]), agent_data["index"]
+        ).replace("\\", "/").replace(".csv", ".npy")
+        )
+
+    print("\nProportions of ultrafilters based on each object")
     objects, counts = np.unique(data.filter(like="ultrafilter_").values, return_counts=True)
     proportions = counts / np.sum(counts)
     print(pd.Series(proportions, index=objects))
-    print("Parameters that developed any perfectly monotone quantifiers")
-    print("(Generation is first generation where monotonicity appears)")
-    indices = np.any(data.filter(like="monotonicity_").values == 1., axis=1)
-    print(data.loc[indices, ["generation", "path_name"]].drop_duplicates(subset="path_name"))
-    print("Parameters that developed any degenerate quantifier")
-    print("(Generation is first generation where degeneracy appears)")
-    indices = np.any(data.filter(like="degenerate_").values == 1., axis=1)
-    print(data.loc[indices, ["generation", "path_name"]].drop_duplicates(subset="path_name"))
+    # print("Parameters that developed any perfectly monotone quantifiers")
+    # print("(Generation is first generation where monotonicity appears)")
+    # indices = np.any(data.filter(like="monotonicity_").values == 1., axis=1)
+    # print(data.loc[indices, ["generation", "path_name"]].drop_duplicates(subset="path_name").sort_values("path_name"))
+
+    degenerate_df = data.filter(like="degenerate_").values == 1.
+    indices = np.any(degenerate_df, axis=1)
+    # print("\nParameters that developed any degenerate quantifier")
+    # print("(Generation is first generation where degeneracy appears)")
+    # print(data.loc[indices, ["generation", "path_name"]].drop_duplicates(subset="path_name").sort_values("path_name"))
+    print("Proportion of monotone: ", degenerate_df.sum() / degenerate_df.size)
+
+    print("\nAverage movement speed by bottleneck size/number of epochs")
+    # first groupby by both bottleneck and # epochs, then take the mean of the movement speed column
+    groupby_training_size = data[["num_epochs", "bottleneck", "inter_generational_movement_speed"]].groupby(["num_epochs", "bottleneck"])
+    print("How training size affects movement speed: ")
+    print(groupby_training_size.agg({
+        "inter_generational_movement_speed": ["mean", "std"]
+    }))
+
     # TODO: add to this function
 
 
@@ -194,9 +232,10 @@ def batch_convert_to_csv(fn_pattern):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--mode', type=str, choices=['convert', 'analyze', 'summarize'],
+    parser.add_argument('--mode', type=str,
+                        choices=['convert', 'analyze', 'summarize'],
                         default='convert')
-    parser.add_argument('--file_pattern', type=str, default='*/quantifiers.npy')
+    parser.add_argument('--file_pattern', type=str, default='./*/*/quantifiers.npy')
     args = parser.parse_args()
 
     if args.mode == 'convert':

@@ -360,9 +360,9 @@ def upward_monotonicity_entropy(all_models, quantifier):
     )(model_ints)
 
 
-    print('q:')
-    print(quantifier)
-    print(true_preds)
+    # print('q:')
+    # print(quantifier)
+    # print(true_preds)
     pred_prob = pred_weights / sum(pred_weights)
     # print(pred_weights)
     # print(pred_prob)
@@ -383,8 +383,8 @@ def upward_monotonicity_entropy(all_models, quantifier):
     ent_pred = -np.nansum(np.array([noq_pred, q_pred]) * pred_logs)
     ent_nopred = -np.nansum(np.array([noq_nopred, q_nopred]) * nopred_logs)
     cond_ent = ent_pred + ent_nopred
-    print(cond_ent)
-    print(q_ent)
+    # print(cond_ent)
+    # print(q_ent)
 
     # return 0 if q_ent == 0 else 1 - (cond_ent / q_ent)
     return 1 - cond_ent / q_ent
@@ -409,7 +409,7 @@ def quantity_memoized(models_string, quantifier_string):
 
 
 def measure_monotonicity(all_models, quantifier,
-                         measure=upward_monotonicity_extensions):
+                         measure=upward_monotonicity_entropy):
     """ Measures degree of monotonicty, as max of the degree of
     positive/negative monotonicty, for a given quantifier _and its negation_
     (since truth values are symmetric for us).
@@ -420,12 +420,14 @@ def measure_monotonicity(all_models, quantifier,
     :return: max of measure applied to all_models and quantifier, plus 1- each
     of those
     """
-    return np.max(
-        [measure(all_models, quantifier),
-         measure(all_models, 1 - quantifier),
-         # downward monotonicity
-         measure(1 - all_models, 1 - quantifier),
-         measure(1 - all_models, quantifier)])
+    interpretations = [
+        measure(all_models, quantifier),
+        measure(all_models, 1 - quantifier),
+        # downward monotonicity
+        measure(1 - all_models, 1 - quantifier),
+        measure(1 - all_models, quantifier)]
+    # return np.max(interpretations)
+    return interpretations
 
 
 def quantifiers_in_order_of_monotonicity(l,
@@ -605,7 +607,7 @@ def check_quantifier_ultrafilter(all_models, quantifier):
     return np.nonzero(columns_identical)[0][0] if np.any(columns_identical) else -1
 
 
-def check_quantifier_dependence(models, quantifier):
+def check_quantifier_dependence(models, quantifier, full_output=False):
     """
     Checks whether the truth of the quantifier depends on a subset of all objects
     An ultrafilter is a quantifier that only depends on one object
@@ -615,13 +617,16 @@ def check_quantifier_dependence(models, quantifier):
     :return: the objects on which the quantifier depends
     """
     model_size = models.shape[1]
-    for n_objects in range(1, model_size):
+    for n_objects in range(1, model_size+1):
         objects_combinations = it.combinations(range(model_size), n_objects)
         truth_table_size = 2 ** n_objects
         for objects in objects_combinations:
             possible_truth_table = np.unique(np.column_stack((models[:, objects], quantifier)), axis=0)
             if len(possible_truth_table) == truth_table_size:
-                return objects
+                if full_output:
+                    return objects, possible_truth_table
+                else:
+                    return objects
 
 
 def almost_ultrafilter(models, quant):

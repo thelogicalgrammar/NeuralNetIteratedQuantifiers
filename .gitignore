@@ -9,4 +9,5 @@ run_script.sh
 
 EDDIE_server/
 
-other_tests/
+local_tests/
+desktop.ini
