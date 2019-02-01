@@ -94,9 +94,8 @@ models = utilities.generate_list_models(10)
 
 ################################################
 # Create the random quantifiers matrices for plotting
-
 # same plot but num of epochs in different plots
-n_quant = 3000
+n_quant = 300
 
 # create a bunch of random network quantifiers
 net_quants = tests.produce_random_quants(10, models, n_quants=n_quant, qtype="network")
@@ -131,15 +130,19 @@ np.save("./truly_random_quants.npy", rand_mons)
 
 net_mons = np.concatenate((
     np.load("./random_nets_quants.npy"),
-    np.load("./random_nets_quants.npy")
+    # np.load("./random_nets_quants.npy")
 ))
 
 rand_mons =np.concatenate((
-    np.load("./truly_random_quants_2.npy"),
-    np.load("./truly_random_quants_3.npy")
+    np.load("./truly_random_quants.npy"),
+    # np.load("./truly_random_quants_3.npy")
 ))
 sns.kdeplot(rand_mons, clip=(0.0, 1.0), label="Monotonicity for random quantifiers")
 sns.kdeplot(net_mons, clip=(0.0, 1.0), label="Monotonicity for random networks")
 plt.legend()
-plt.show()
+#plt.show()
+plt.savefig("random_monotonicities.png",
+            bbox_inches='tight',
+            transparent=True,
+            size=(8, 6), dpi=300)
 
