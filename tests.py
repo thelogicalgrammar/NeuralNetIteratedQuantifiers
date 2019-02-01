@@ -426,8 +426,8 @@ def measure_monotonicity(all_models, quantifier,
         # downward monotonicity
         measure(1 - all_models, 1 - quantifier),
         measure(1 - all_models, quantifier)]
-    # return np.max(interpretations)
-    return interpretations
+    return np.max(interpretations)
+    # return interpretations
 
 
 def quantifiers_in_order_of_monotonicity(l,
