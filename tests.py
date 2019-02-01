@@ -109,7 +109,9 @@ def produce_random_quants(max_model_size, all_models, n_quants=1, qtype="random"
     # TODO: implement more quantifier types
     """
     if n_quants > 1:
-        return np.column_stack(tuple(produce_random_quants(max_model_size, all_models) for _ in range(n_quants)))
+        return np.column_stack(tuple(produce_random_quants(max_model_size,
+                                                           all_models,
+                                                           qtype=qtype) for _ in range(n_quants)))
 
     if n_quants == 1:
         if qtype == "random":
