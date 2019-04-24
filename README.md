@@ -26,6 +26,8 @@ Example of a run of the model:
 python ../iteration.py --num_trial 1 --bottleneck 512 --save_path path/to/folder/ --n_generations 300 --n_agents 10 --max_model_size 10 --num_epochs 4 --shuffle_input True
 ```
 
+`iterate` stores the results in an .npy file containing an array with shape (# generations, # objects in domain, # agents).
+
 ### Analyzing the results
 
 The core function for analyzing the results of a single model is `summarize_trial` in *analysis.py*. 
