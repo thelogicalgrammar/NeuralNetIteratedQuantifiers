@@ -9,14 +9,14 @@ This repository contains everything that is needed to run the model as well as t
 ### Running the model 
 
 The core function for running the model is `iterate` in *iteration.py*. 
-The `iterate` function accepts the following parameters:
+The `iterate` function accepts the following parameters (See paper for more details on the meaning of each parameter):
 
 - `num_trial`: The index of the model run when running the model multiple times.
 - `bottleneck`: The number of observations used to train each neural network learner.
 - `save_path`: Where to save the model results.
 - `n_generations`: For how many generations of iterated learning to run.
 - `n_agents`: How many agents in each generation.
-- `max_model_size`: The number of elements in the restrictor set **B**
+- `max_model_size`: The number of elements in the restrictor set.
 - `num_epochs`: How many epochs to train the neural network learners for.
 - `shuffle_input`: Whether to shuffle the input of the neural networks.
 
@@ -37,7 +37,7 @@ Example of analysis:
 ```python
 data = np.load('path/to/results.npy')
 # NB: parents and trial_info assumes that the files are named path/to/trial_info_dir/quantifiers.ext and path/to/trial_info_dir/parents.ext
-parents = np.load('path/to/results.npy'.replace('quantifiers', 'parents')).astype(int)
+parents = np.load('path/to/parents.npy').astype(int)
 trial_info = trial_info_from_fname('path/to/results.npy')
 table = summarize_trial(trial_info, data, parents)
 ```
@@ -61,7 +61,7 @@ python analysis.py --mode summarize --file_pattern pattern/matching/summaries*.c
 
 ### Plotting the results
 
-`CogSci_paper.py` contains snippets of code needed to reproduce the plots shown in the CogSci paper.
+*CogSci_paper.py* contains snippets of code needed to reproduce the plots shown in the CogSci paper.
 Other plotting functions can be found in plotting.py.
 
 ## Authors
