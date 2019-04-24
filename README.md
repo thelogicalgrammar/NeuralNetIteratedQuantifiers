@@ -34,11 +34,11 @@ The core function for analyzing the results of a single model is `summarize_tria
 See function docstring for more details on the parameters.
 
 Example of analysis:
-```
-data = np.load(path/to/results.npy)
+```python
+data = np.load('path/to/results.npy')
 # NB: parents and trial_info assumes that the files are named path/to/trial_info_dir/quantifiers.ext and path/to/trial_info_dir/parents.ext
-parents = np.load("path/to/results.npy".replace('quantifiers', 'parents')).astype(int)
-trial_info = trial_info_from_fname(path/to/results.npy)
+parents = np.load('path/to/results.npy'.replace('quantifiers', 'parents')).astype(int)
+trial_info = trial_info_from_fname('path/to/results.npy')
 table = summarize_trial(trial_info, data, parents)
 ```
 
