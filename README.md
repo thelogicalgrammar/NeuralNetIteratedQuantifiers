@@ -64,6 +64,10 @@ python analysis.py --mode summarize --file_pattern pattern/matching/summaries*.c
 *CogSci_paper.py* contains snippets of code needed to reproduce the plots shown in the CogSci paper.
 Other plotting functions can be found in plotting.py.
 
+### Data
+
+The original data plotted in the CogSci paper is available at https://osf.io/ume39/?view_only=5af8aa196e484001ae1758cc5bcff5a4.
+
 ## Authors
 
 * **Shane Steinert-Threlkeld** - *Co-first author*
