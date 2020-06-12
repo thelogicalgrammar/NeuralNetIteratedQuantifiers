@@ -144,6 +144,6 @@ class Population:
             parent_bools = parent.map(models)
             # shuffle each input model
             if shuffle_input:
-                np.random.shuffle(models.T)
+                [np.random.shuffle(row) for row in models]
             child.learn(models, parent_bools, num_epochs=num_epochs)
         return parents

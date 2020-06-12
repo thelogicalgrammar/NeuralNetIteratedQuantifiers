@@ -564,6 +564,20 @@ def check_quantity(list_models, map_lang):
     """
     Calculates quantity as 1 - H(quantifier is true at the model | model size)
     """
+
+    if np.all(map_lang) or np.all(np.logical_not(map_lang)):
+        return 1.
+
+    # uniform distributions
+    p_q_true = sum(map_lang) / len(map_lang)
+    p_q_false = 1 - p_q_true
+    q_ent = -p_q_true*np.log2(p_q_true) - p_q_false*np.log2(p_q_false)
+
+    # uniform distributions
+    p_q_true = sum(quantifier) / len(quantifier)
+    p_q_false = 1 - p_q_true
+    q_ent = -p_q_true*np.log2(p_q_true) - p_q_false*np.log2(p_q_false)
+
     # prob_num is the array with the unconditional probability of each # of 1s in a random model
     count_ones = np.count_nonzero(list_models, axis=1)
     num_arrays_of_length = np.unique(count_ones, return_counts=True)[1]
@@ -587,7 +601,7 @@ def check_quantity(list_models, map_lang):
     # since the maximum entropy of a bernoulli variable is 1 bit, cond_entropy <= 1
     # make it into a distance rather than a similarity.
     # If quantity is 1, it means that the quantifier is completely monotonic
-    quantity = 1 - cond_entropy
+    quantity = 1 - (cond_entropy/q_ent)
     return quantity
 
 
