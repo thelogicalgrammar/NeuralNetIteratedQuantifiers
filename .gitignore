@@ -1,7 +1,5 @@
 .idea/
 __pycache__/
-
-multiple_simulations.sh
-
-EDDIE_server/
 desktop.ini
+Archive/*
+LISA/*.out
