@@ -573,11 +573,6 @@ def check_quantity(list_models, map_lang):
     p_q_false = 1 - p_q_true
     q_ent = -p_q_true*np.log2(p_q_true) - p_q_false*np.log2(p_q_false)
 
-    # uniform distributions
-    p_q_true = sum(quantifier) / len(quantifier)
-    p_q_false = 1 - p_q_true
-    q_ent = -p_q_true*np.log2(p_q_true) - p_q_false*np.log2(p_q_false)
-
     # prob_num is the array with the unconditional probability of each # of 1s in a random model
     count_ones = np.count_nonzero(list_models, axis=1)
     num_arrays_of_length = np.unique(count_ones, return_counts=True)[1]
