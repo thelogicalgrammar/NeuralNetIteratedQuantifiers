@@ -101,10 +101,14 @@ class NetworkAgent(Agent):
         if optimizer == 'adam':
             optim = torch.optim.Adam(self.model.parameters())
         elif optimizer == 'sgd':
-            optim = torch.optim.SGD(self.model.parameters())
+            optim = torch.optim.SGD(
+                self.model.parameters(),
+                lr=0.1
+            )
         elif optimizer == 'sgd-momentum':
             optim = torch.optim.SGD(
                 self.model.parameters(),
+                lr=0.1,
                 momentum=1
             )
         else:
