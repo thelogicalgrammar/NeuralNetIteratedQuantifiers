@@ -15,7 +15,7 @@ python ../iteration.py \
 --n_generations 300 \
 --n_agents 10 \
 --max_model_size 10 \
---n_epochs $3 \
+--num_epochs $3 \
 --shuffle_input False \
 --optimizer sgd
 
