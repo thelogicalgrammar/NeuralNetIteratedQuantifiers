@@ -94,9 +94,22 @@ class NetworkAgent(Agent):
     def __init__(self, max_model_size):
         self.model = MLP(max_model_size)
 
-    def learn(self, models, parent_bools, batch_size=32, num_epochs=3, shuffle_by_epoch=True):
+    def learn(self, models, parent_bools, batch_size=32,
+            num_epochs=3, shuffle_by_epoch=True, optimizer='adam'):
+
         # TODO: play with options here?
-        optim = torch.optim.Adam(self.model.parameters())
+        if optimizer == 'adam':
+            optim = torch.optim.Adam(self.model.parameters())
+        elif optimizer == 'sgd':
+            optim = torch.optim.SGD(self.model.parameters())
+        elif optimizer == 'sgd-momentum':
+            optim = torch.optim.SGD(
+                self.model.parameters(),
+                momentum=1
+            )
+        else:
+            raise InputError('Optimizer type not known')
+
         for epoch in range(num_epochs):
             # re-order the data each epoch
             permutation = np.random.permutation(len(models)) if shuffle_by_epoch else np.arange(len(models))
@@ -127,7 +140,7 @@ class Population:
         # list of agent objects
         self.agents = [NetworkAgent(max_model_size) for _ in range(size)]
 
-    def learn_from_population(self, parent_pop, bottleneck_size, num_epochs=1, shuffle_input=False):
+    def learn_from_population(self, parent_pop, bottleneck_size, num_epochs=1, shuffle_input=False, optimizer='adam'):
         """
         Each child in self.agents is selected in turn. A random parent from old pop is selected with replacement.
         models is created as a random array of booleans (there can be repeated rows, I don't know if this is fine)
@@ -145,5 +158,10 @@ class Population:
             # shuffle each input model
             if shuffle_input:
                 [np.random.shuffle(row) for row in models]
-            child.learn(models, parent_bools, num_epochs=num_epochs)
+            child.learn(
+                models,
+                parent_bools,
+                num_epochs=num_epochs,
+                optimizer=optimizer
+            )
         return parents
