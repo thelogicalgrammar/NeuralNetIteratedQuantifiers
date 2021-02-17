@@ -11,7 +11,7 @@ source ../venv/bin/activate
 python ../iteration.py \
 --num_trial $1 \
 --bottleneck $2 \
---save_path ./Archive \
+--save_path ./Archive/ \
 --n_generations 300 \
 --n_agents 10 \
 --max_model_size 10 \
