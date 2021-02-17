@@ -2,6 +2,6 @@
 
 for path in ../Archive/*/quantifiers.npy
 do
-	echo($path)
+	echo $path
     sbatch job_script_analysis.sh $path
 done
