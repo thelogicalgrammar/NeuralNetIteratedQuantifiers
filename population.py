@@ -109,7 +109,7 @@ class NetworkAgent(Agent):
             optim = torch.optim.SGD(
                 self.model.parameters(),
                 lr=0.1,
-                momentum=1
+                momentum=0.9
             )
         else:
             raise InputError('Optimizer type not known')
