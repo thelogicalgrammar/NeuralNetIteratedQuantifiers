@@ -105,7 +105,7 @@ class NetworkAgent(Agent):
                 self.model.parameters(),
                 lr=0.1
             )
-        elif optimizer == 'sgd-momentum':
+        elif optimizer == 'sgdmomentum':
             optim = torch.optim.SGD(
                 self.model.parameters(),
                 lr=0.1,
