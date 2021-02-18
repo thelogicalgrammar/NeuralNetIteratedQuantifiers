@@ -16,7 +16,7 @@ python ../iteration.py \
 --n_agents 10 \
 --max_model_size 10 \
 --num_epochs $3 \
---shuffle_input True \
+--shuffle_input False \
 --optimizer sgdmomentum
 
 deactivate
