@@ -27,7 +27,6 @@ class MLP(nn.Module):
 
 
 class Agent:
-
     def produce(self, models_to_consider):
         pass
 
@@ -54,7 +53,6 @@ class Agent:
 
 
 class FixedAgent(Agent):
-
     def __init__(self, max_model_size):
         self.possible_models = generate_list_models(max_model_size)
         self.confidence = None
@@ -83,7 +81,6 @@ class ConfidenceTeacher(FixedAgent):
 
 
 class UniformRandomAgent(FixedAgent):
-
     def __init__(self, max_model_size):
         super(UniformRandomAgent, self).__init__(max_model_size)
         self.confidence = np.random.uniform(

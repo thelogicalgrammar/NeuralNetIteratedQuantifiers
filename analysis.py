@@ -101,8 +101,6 @@ def summarize_summaries(fn_pattern):
         "inter_generational_movement_speed": ["mean", "std"]
     }))
 
-    # TODO: add to this function
-
 
 def check_all_monotonicity_ultrafilter(analysis):
     """
