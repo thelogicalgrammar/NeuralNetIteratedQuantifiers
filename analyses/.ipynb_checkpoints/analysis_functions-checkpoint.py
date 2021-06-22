@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 import scipy.stats
 import numpy as np
 import seaborn as sns
@@ -42,8 +43,13 @@ def get_proportions_of_property(df, property_name, criterion):
         value_name=property_name
     )
     
-    groupby_df = df_property[df_property['generation']>=100].groupby(['num_epochs', 'bottleneck'])
-    return groupby_df[property_name].apply(lambda x: x[criterion(x)].count()/len(x))
+    groupby_df = df_property.groupby(['num_epochs', 'bottleneck'])
+    return groupby_df[property_name].apply(
+        lambda x: criterion(x).sum()/x.size)
+
+
+def distance_to_ultrafilter(quant, models):
+    return np.logical_not(np.column_stack((models, 1-models)) == quant.reshape(-1,1)).sum(axis=0).min()
 
 
 def add_property(fpath, property_func=distance_to_ultrafilter, propname='ultradist'):
@@ -69,10 +75,6 @@ def add_property(fpath, property_func=distance_to_ultrafilter, propname='ultradi
         new_df.to_csv(csv_path)
 
 
-def distance_to_ultrafilter(quant, models):
-    return np.logical_not(np.column_stack((models, 1-models)) == quant.reshape(-1,1)).sum(axis=0).min()
-
-
 def get_summaries(fn_pattern):
     _data_list = []
     for f_name in glob(fn_pattern):
@@ -86,7 +88,7 @@ def get_summaries(fn_pattern):
     return data
 
 
-def plot_property(df, plot_type, ax=None, property_name=None, **kwargs):
+def plot_property(df, ax=None, property_name=None, **kwargs):
     df_property = df.filter(like=property_name, axis=1)
     generations = df_property.index
     if ax is None:
@@ -107,8 +109,8 @@ def trial_info_from_fname(fname):
     return trial_info
 
 
-def plot_property_against_property(df, fig, ax, x_property, y_property, c="generation",
-                                   plot_most=True, plot_non_most=True):
+def plot_property_against_property(df, fig, ax, x_property, y_property,
+        c="generation", plot_most=True, plot_non_most=True):
     """
     """
     
@@ -144,17 +146,51 @@ def plot_property_against_property(df, fig, ax, x_property, y_property, c="gener
     else:
         colors = df.filter(like=c, axis=1).values.flatten()    
         
+    indices_plot = np.zeros_like(data_x).astype(bool)
     if plot_most:
-        scatter = ax.scatter(
-            data_x[most], data_y[most], s=0.05, c=colors[most]
-        )
-
+        indices_plot[most] = True
     if plot_non_most:
         nonmost = np.logical_not(most)
-        scatter = ax.scatter(
-            data_x[nonmost], data_y[nonmost], s=0.05, c=colors[nonmost]
-        )
+        indices_plot[nonmost] = True
 
+    scatter = ax.scatter(
+        data_x[indices_plot],
+        data_y[indices_plot],
+        s=0.05,
+        c=colors[indices_plot],
+        cmap='viridis'
+    )
+
+    ax_divider = make_axes_locatable(ax)
+
+    ax_right = ax_divider.append_axes(
+        'right',
+        size='20%',
+        pad=0
+    )
+    
+    ax_top = ax_divider.append_axes(
+        'top',
+        size='20%',
+        pad=0
+    )
+    sns.kdeplot(
+        y=data_y[indices_plot],
+        ax=ax_right,
+        fill=True,
+        # color='blue'
+    )
+    sns.kdeplot(
+        x=data_x[indices_plot],
+        ax=ax_top,
+        fill=True,
+        # color='blue'
+    )
+    for a in [ax_right, ax_top]:
+        a.set_xlabel('')
+        a.set_ylabel('')
+        a.set_xticks([])
+        a.set_yticks([])
     return scatter
 
 
@@ -167,14 +203,22 @@ def wrapper_property_against_property(idx, df, fig, ax, axes, x_property, y_prop
 
     """
     # sct is None if c != "num_trials"
-    sct = plot_property_against_property(df, fig, ax, x_property, y_property, **kwargs)
+    sct = plot_property_against_property(
+        df, fig, ax, x_property, y_property, **kwargs)
     
     if kwargs["c"] != "most_like" and idx==0:
-        cbar = plt.colorbar(sct, ax=axes, fraction=0.05)
+        cbar = plt.colorbar(
+            sct,
+            ax=axes,
+            fraction=0.03,
+            shrink=0.8
+        )
         label = kwargs['c'] if cbarlabel is None else cbarlabel
-        cbar.set_label(label)
+        cbar.ax.tick_params(labelsize='10')
+        cbar.set_label(label, fontsize=12)
     
-    return lambda num_epochs: f"Num epochs: {num_epochs}\n{y_property}", lambda : str(x_property)
+    return (lambda num_epochs: f"Num epochs: {num_epochs}\n{y_property}",
+            lambda bottleneck: f"{x_property}\nBtlnk: {bottleneck}")
             
             
 def wrapper_single_property(idx, df, fig, ax, axes, **kwargs):
@@ -186,35 +230,64 @@ def wrapper_single_property(idx, df, fig, ax, axes, **kwargs):
 
     plot_property(df, ax, c=num_trials, alpha=0.5, cmap="Dark2", **kwargs)
     
-    return lambda num_epochs: "Property", lambda : "Generation"
+    xlabelfunc = lambda num_epochs: (
+        'Num epochs: ' + num_epochs +
+        '\n' + kwargs['property_name'].capitalize()
+    )
+    ylabelfunc = lambda bottleneck: "Generation"
+    return xlabelfunc, ylabelfunc
 
 
-def plot_property_across_parameters(df, plot_continuation, **kwargs):
+def plot_property_across_parameters(df,plot_continuation,xlabel=None,**kwargs):
     """
     """
+    sns.set_style('dark')
     # parameters of interests: bottleneck, num_epochs
-    df_separated = {x: pd.DataFrame(y) for x, y in df.groupby(by=["bottleneck", "num_epochs"])}
+    df_separated = {
+        x: pd.DataFrame(y) 
+        for x, y 
+        in df.groupby(by=["bottleneck", "num_epochs"])
+    }
     
-    fig, axes = plt.subplots(2, 4, sharex=True, sharey=True)
+    fig, axes = plt.subplots(
+        2, 4, 
+        # sharex=True,
+        # sharey=True
+    )
 
     bottleneck_dict = {"200": 0, "512": 1, "715": 2, "1024": 3}
     num_epochs_dict = {"4": 0, "8": 1}
 
-    for idx, ((bottleneck, num_epochs), sub_df) in enumerate(df_separated.items()):
-        
-        ax = axes[num_epochs_dict[num_epochs], bottleneck_dict[bottleneck]]
-        
-        ylabelfunc, xlabelfunc = plot_continuation(idx, sub_df, fig, ax, axes, **kwargs)
+    for idx, ((bottleneck, num_epochs), sub_df) in enumerate(
+            df_separated.items()):
+
+        xax_index = num_epochs_dict[num_epochs]
+        yax_index = bottleneck_dict[bottleneck]
+        ax = axes[xax_index,yax_index]
+
+        ylabelfunc, xlabelfunc = plot_continuation(
+            idx, sub_df, fig, ax, axes, **kwargs)
         
         if num_epochs_dict[num_epochs] == 0:
-            ax.set_title(f"Bttlnk: {bottleneck}", fontsize=10)
+            # ax.set_title(f"Bttlnk: {bottleneck}", fontsize=12)
+            ax.set_xticks([])
         elif num_epochs_dict[num_epochs] == 1:
-            ax.set_xlabel(xlabelfunc())
+            if xlabel is None:
+                ax.set_xlabel(xlabelfunc(bottleneck), fontsize=12)
+            else:
+                ax.set_xlabel(xlabel)
 
         if bottleneck_dict[bottleneck] == 0:
-            ax.set_ylabel(ylabelfunc(num_epochs))
+            ax.set_ylabel(ylabelfunc(num_epochs), fontsize=12)
+        else:
+            ax.set_yticks([])
         
     ax.set_ylim(0,1)
+    fig.subplots_adjust(
+        left=0.2,
+        right=1-0.2,
+        bottom=0.2
+    )
     
     return fig, axes
 
@@ -443,16 +516,24 @@ def plot_random_quants():
                 size=(8, 6), dpi=300)
 
 
-def plot_by_number_epochs(df, property_name='monotonicity'):
+def plot_by_number_epochs(df, filename='mon_by_trainingsize.png',
+        property_name='monotonicity'):
     """
     This produces the plot for the paper
     """
     sns.set(font_scale=1.2)
-    g = sns.FacetGrid(data=df, col='num_epochs', hue='bottleneck', palette="Blues")
-    g = (g.map(sns.lineplot, 'generation', property_name)
+    g = sns.FacetGrid(
+        data=df, 
+        col='num_epochs', 
+        hue='bottleneck', 
+        palette="Blues"
+    )
+    g = (
+        g.map(sns.lineplot, 'generation', property_name)
          .add_legend()
-         .set_axis_labels("Generation", property_name.capitalize()))
-    g.savefig('./evolution_monotonicity_by_training_size.pdf')
+         .set_axis_labels("Generation", property_name.capitalize())
+    )
+    g.savefig(f'./{filename}', dpi=300)
 
 
 ###################### original file

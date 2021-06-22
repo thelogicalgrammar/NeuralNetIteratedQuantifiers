@@ -48,6 +48,10 @@ def get_proportions_of_property(df, property_name, criterion):
         lambda x: criterion(x).sum()/x.size)
 
 
+def distance_to_ultrafilter(quant, models):
+    return np.logical_not(np.column_stack((models, 1-models)) == quant.reshape(-1,1)).sum(axis=0).min()
+
+
 def add_property(fpath, property_func=distance_to_ultrafilter, propname='ultradist'):
     models = generate_list_models(10)
     for f_name in glob(fpath):
@@ -69,10 +73,6 @@ def add_property(fpath, property_func=distance_to_ultrafilter, propname='ultradi
             frame = frame.append(gen_row, ignore_index=True)
         new_df = pd.concat([df,frame], axis=1)
         new_df.to_csv(csv_path)
-
-
-def distance_to_ultrafilter(quant, models):
-    return np.logical_not(np.column_stack((models, 1-models)) == quant.reshape(-1,1)).sum(axis=0).min()
 
 
 def get_summaries(fn_pattern):
@@ -522,10 +522,17 @@ def plot_by_number_epochs(df, filename='mon_by_trainingsize.png',
     This produces the plot for the paper
     """
     sns.set(font_scale=1.2)
-    g = sns.FacetGrid(data=df, col='num_epochs', hue='bottleneck', palette="Blues")
-    g = (g.map(sns.lineplot, 'generation', property_name)
+    g = sns.FacetGrid(
+        data=df, 
+        col='num_epochs', 
+        hue='bottleneck', 
+        palette="Blues"
+    )
+    g = (
+        g.map(sns.lineplot, 'generation', property_name)
          .add_legend()
-         .set_axis_labels("Generation", property_name.capitalize()))
+         .set_axis_labels("Generation", property_name.capitalize())
+    )
     g.savefig(f'./{filename}', dpi=300)
 
 
