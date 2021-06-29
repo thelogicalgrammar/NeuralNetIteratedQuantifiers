@@ -210,12 +210,19 @@ def wrapper_property_against_property(idx, df, fig, ax, axes, x_property, y_prop
         cbar = plt.colorbar(
             sct,
             ax=axes,
-            fraction=0.03,
-            shrink=0.8
+            fraction=0.1,
+            aspect=30,
+#             pad=0.5,
+            shrink=0.7
         )
         label = kwargs['c'] if cbarlabel is None else cbarlabel
-        cbar.ax.tick_params(labelsize='10')
-        cbar.set_label(label, fontsize=12)
+#         cbar.ax.tick_params(
+#             labelsize='10'
+#         )
+        cbar.set_label(
+            label, 
+#             fontsize=10
+        )
     
     return (lambda num_epochs: f"Num epochs: {num_epochs}\n{y_property}",
             lambda bottleneck: f"{x_property}\nBtlnk: {bottleneck}")
@@ -252,7 +259,8 @@ def plot_property_across_parameters(df,plot_continuation,xlabel=None,**kwargs):
     fig, axes = plt.subplots(
         2, 4, 
         # sharex=True,
-        # sharey=True
+        # sharey=True,
+        figsize=(7,5)
     )
 
     bottleneck_dict = {"200": 0, "512": 1, "715": 2, "1024": 3}
@@ -266,27 +274,39 @@ def plot_property_across_parameters(df,plot_continuation,xlabel=None,**kwargs):
         ax = axes[xax_index,yax_index]
 
         ylabelfunc, xlabelfunc = plot_continuation(
-            idx, sub_df, fig, ax, axes, **kwargs)
+            idx, 
+            sub_df, 
+            fig, 
+            ax, 
+            axes, 
+            **kwargs
+        )
         
         if num_epochs_dict[num_epochs] == 0:
             # ax.set_title(f"Bttlnk: {bottleneck}", fontsize=12)
             ax.set_xticks([])
         elif num_epochs_dict[num_epochs] == 1:
             if xlabel is None:
-                ax.set_xlabel(xlabelfunc(bottleneck), fontsize=12)
+                ax.set_xlabel(
+                    xlabelfunc(bottleneck), 
+#                     fontsize=10
+                )
             else:
                 ax.set_xlabel(xlabel)
 
         if bottleneck_dict[bottleneck] == 0:
-            ax.set_ylabel(ylabelfunc(num_epochs), fontsize=12)
+            ax.set_ylabel(
+                ylabelfunc(num_epochs), 
+#                 fontsize=10
+            )
         else:
             ax.set_yticks([])
         
     ax.set_ylim(0,1)
     fig.subplots_adjust(
-        left=0.2,
+#         left=0.2,
         right=1-0.2,
-        bottom=0.2
+#         bottom=0.2
     )
     
     return fig, axes
@@ -294,7 +314,7 @@ def plot_property_across_parameters(df,plot_continuation,xlabel=None,**kwargs):
 
 def find_selected_quants(bottleneck, num_epochs, burn_in=0):
     fname_pattern = (
-        "C:/Users/s1569804/Documents/Amsterdam_locals/quantifierEvolutionModel/Archive/" +
+        "C:/Users/s1569804/Desktop/Archive_shuffled_adam/" +
         f"bottleneck-{bottleneck}+max_model_size-10+n_agents-10+n_generations-300+num_epochs-{num_epochs}+" +
         "num_trial-*+shuffle_input-True/quantifiers.npy"
     )
@@ -337,6 +357,7 @@ def find_selected_quants(bottleneck, num_epochs, burn_in=0):
     
     
 def plot_confidence_levels(bottleneck, num_epochs, ax):
+    
     selected_quants, num_ones = find_selected_quants(bottleneck, num_epochs)
     
     # I'm not interested in the number of 1s, but rather than difference between 
@@ -350,9 +371,7 @@ def plot_confidence_levels(bottleneck, num_epochs, ax):
     ######### plotting
 
     cmap = plt.cm.spring
-
     color_list = cmap(np.linspace(1, 0, 5))
-
     # loop over differences between 5 and model size
     for i in range(5):
         # where the model 
@@ -533,6 +552,11 @@ def plot_by_number_epochs(df, filename='mon_by_trainingsize.png',
          .add_legend()
          .set_axis_labels("Generation", property_name.capitalize())
     )
+    
+    axes = g.axes.flatten()
+    axes[0].set_title("Epochs = 4")
+    axes[1].set_title("Epochs = 8")
+    
     g.savefig(f'./{filename}', dpi=300)
 
 
